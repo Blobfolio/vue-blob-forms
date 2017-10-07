@@ -1,1 +1,190 @@
+/**
+ * Styles for the Demo!
+ */
+
+// ---------------------------------------------------------------------
+// Includes
+// ---------------------------------------------------------------------
+
+@import "base";
+@import "reset";
+
+// --------------------------------------------------------------------- end includes
+
+
+
+// ---------------------------------------------------------------------
+// Colors
+// ---------------------------------------------------------------------
+
+@each $k, $v in $colors {
+	.fg-#{$k},
+	.fg-#{$k}-hover:hover { color: $v; }
+	.bg-#{$k},
+	.bg-#{$k}-hover:hover { background-color: $v; }
+}
+
+.fg-grey { color: $color-grey; }
+
+// --------------------------------------------------------------------- end colors
+
+
+
+// ---------------------------------------------------------------------
+// Base
+// ---------------------------------------------------------------------
+
+// Hide Vue gibberish until it is ready.
 [v-cloak] { display: none; }
+
+body {
+	font-family: $font-mono;
+	@include font-size(.8);
+	font-weight: $font-regular;
+
+	color: color('black');
+
+	line-height: 1.5;
+	letter-spacing: .1em;
+}
+
+.wrapper {
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 50px 20px;
+}
+
+h1 {
+	@include font-size(1.25);
+	margin-bottom: 2em;
+}
+
+
+// --------------------------------------------------------------------- end base
+
+
+
+// ---------------------------------------------------------------------
+// Form
+// ---------------------------------------------------------------------
+
+input,
+select,
+textarea {
+	height: 40px;
+	vertical-align: middle;
+	line-height: 40px;
+	padding: 0 10px;
+	width: 100%;
+	max-width: 200px;
+	background-color: color('white');
+
+	font: inherit;
+	color: inherit;
+
+	border: 1px solid $color-grey;
+	transition: border .3s;
+
+	&:hover { border-color: color('blue', 'light'); }
+
+	&:focus,
+	&:active {
+		border-color: color('blue');
+	}
+
+	&.is-invalid {
+		border-color: color('red', 'light');
+
+		&:focus,
+		&:active {
+			border-color: color('red');
+		}
+	}
+
+	&.is-valid.is-touched {
+		border-color: color('green', 'light');
+
+		&:focus,
+		&:active {
+			border-color: color('green');
+		}
+	}
+}
+
+textarea {
+	height: 100px;
+	line-height: 1.5;
+	padding: 10px;
+}
+
+select[multiple] {
+	height: 75px;
+}
+
+button {
+	background-color: color('blue');
+	color: color('white');
+	text-transform: uppercase;
+	font-weight: $font-bold;
+
+	display: block;
+	height: 40px;
+	vertical-align: middle;
+	line-height: 40px;
+	padding: 0 20px;
+}
+
+// --------------------------------------------------------------------- end form
+
+
+
+// ---------------------------------------------------------------------
+// Table
+// ---------------------------------------------------------------------
+
+.demo {
+	border-collapse: collapse;
+	width: 100%;
+
+	th, td {
+		padding: 20px 10px;
+		text-align: left;
+		vertical-align: top;
+		min-width: 90px;
+
+		&:last-child {
+			width: 300px;
+		}
+	}
+
+	th {
+		font-weight: $font-bold;
+		color: color('pink');
+		text-transform: uppercase;
+	}
+
+	tbody,
+	tfoot {
+		th, td {
+			border-top: 1px dashed $color-grey;
+		}
+	}
+}
+
+// --------------------------------------------------------------------- end table
+
+
+
+// ---------------------------------------------------------------------
+// Misc
+// ---------------------------------------------------------------------
+
+.error-message {
+	color: color('red');
+
+	& + .error-message {
+		margin-top: 1em;
+	}
+}
+
+// --------------------------------------------------------------------- end misc

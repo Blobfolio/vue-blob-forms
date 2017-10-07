@@ -8,34 +8,244 @@
 	<link rel="stylesheet" href="assets/demo.css" media="all">
 </head>
 <body>
+	<div class="wrapper" id="vue-app" v-cloak>
+		<h1>vue-blob-forms</h1>
 
-	<div class="wrapper" id="vue-app">
 		<form name="demo" v-blob-forms>
-			<fieldset>
-				<label for="demo-textField">Text Input</label>
-				<input type="text" name="textField" id="demo-textField" v-model.trim="textField" minlength="10" maxlength="20" required />
-			</fieldset>
-
-			<fieldset>
-				<label for="demo-emailField">Email Input</label>
-				<input type="email" name="emailField" id="demo-emailField" v-model.trim="emailField" required />
-			</fieldset>
-
-			<fieldset>
-				<label for="demo-telField">Phone Input</label>
-				<input type="tel" name="telField" id="demo-telField" v-model.trim="telField" minlength="10" maxlength="20" required />
-			</fieldset>
-
-			<fieldset>
-				<label for="demo-textareaField">Textarea Input</label>
-				<textarea name="textareaField" id="demo-textareaField" v-model.trim="textareaField" maxlength="100"></textarea>
-			</fieldset>
-
-			<fieldset>
-				<label for="demo-dateField">Date Input</label>
-				<input type="date" name="dateField" id="demo-dateField" v-model.trim="dateField" minlength="10" maxlength="20" required />
-			</fieldset>
+			<table class="demo" cellspacing="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th>Type</th>
+						<th>Field</th>
+						<th>Touched</th>
+						<th>Changed</th>
+						<th>Valid</th>
+						<th>Error</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>
+							<label for="demo-dateField">Date</label>
+						</td>
+						<td>
+							<input v-model.trim="fields.date" type="date" v-bind:min="dateMin" v-bind:max="dateMax" required name="dateField" id="demo-dateField" />
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'dateField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'dateField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'dateField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'dateField')">{{ formErrors('demo', 'dateField') }}</div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<label for="demo-emailField">Email</label>
+						</td>
+						<td>
+							<input v-model.trim="fields.email" type="email" placeholder="user@domain.com" required name="emailField" id="demo-emailField" />
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'emailField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'emailField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'emailField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'emailField')">{{ formErrors('demo', 'emailField') }}</div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<label for="demo-numberField">Number</label>
+						</td>
+						<td>
+							<input v-model.number="fields.number" type="number" placeholder="#" v-bind:min="numMin" v-bind:max="numMax" required name="numberField" id="demo-numberField" />
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'numberField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'numberField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'numberField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'numberField')">{{ formErrors('demo', 'numberField') }}</div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<label for="demo-telField">Tel</label>
+						</td>
+						<td>
+							<input v-model.trim="fields.tel" type="tel" placeholder="(123) 456-7890" minlength="10" required name="telField" id="demo-telField" />
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'telField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'telField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'telField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'telField')">{{ formErrors('demo', 'telField') }}</div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<label for="demo-textField">Text</label>
+						</td>
+						<td>
+							<input v-model.trim="fields.text" type="text" maxlength="50" required name="textField" id="demo-textField" />
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'textField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'textField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'textField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'textField')">{{ formErrors('demo', 'textField') }}</div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<label for="demo-textareaField">Textarea</label>
+						</td>
+						<td>
+							<textarea v-model.trim="fields.textarea" maxlength="50" required name="textareaField" id="demo-textareaField"></textarea>
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'textareaField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'textareaField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'textareaField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'textareaField')">{{ formErrors('demo', 'textareaField') }}</div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<label for="demo-selectField">Select</label>
+						</td>
+						<td>
+							<select v-model.trim="fields.select" required name="selectField" id="demo-selectField">
+								<option value="">---</option>
+								<option value="apple">Apple</option>
+								<option value="banana">Banana</option>
+								<option value="carrot">Carrot</option>
+							</select>
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'selectField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'selectField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'selectField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'selectField')">{{ formErrors('demo', 'selectField') }}</div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<label for="demo-multiselectField">Multi-Select</label>
+						</td>
+						<td>
+							<select v-model.trim="fields.multiselect" required name="multiselectField" id="demo-multiselectField" multiple>
+								<option value="apple">Apple</option>
+								<option value="banana">Banana</option>
+								<option value="carrot">Carrot</option>
+							</select>
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'multiselectField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'multiselectField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'multiselectField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'multiselectField')">{{ formErrors('demo', 'multiselectField') }}</div>
+						</td>
+					</tr>
+				</tbody>
+				<tfoot>
+					<tr>
+						<th scope="row">Form</th>
+						<td></td>
+						<td>
+							<span v-if="formTouched('demo')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-for="(error, field) in formErrors('demo')">
+								<strong>{{ field }}:</strong><br>
+								{{ error }}
+							</div>
+						</td>
+					</tr>
+				</tfoot>
+			</table>
 		</form>
+
+		<button v-on:click.prevent="validateForm('demo')">Check All</button>
 	</div><!--#vue-app-->
 
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.4/vue.js"></script>

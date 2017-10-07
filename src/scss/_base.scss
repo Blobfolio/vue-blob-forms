@@ -1,0 +1,114 @@
+//---------------------------------------------------------------------
+// Base styles
+//
+// The "base" contains variables and functions
+//---------------------------------------------------------------------
+
+
+
+//-------------------------------------------------
+// Mixins
+
+//-------------------------------------------------
+// Font size
+//
+// Generate font-size definitions in REM for hip
+// browsers, and equivalent PX for old ones
+//
+// @param size (rem)
+// @return size px, size rem
+@mixin font-size($sizeValue: 1) {
+	font-size: ($sizeValue * 16) + px;
+	font-size: $sizeValue + rem;
+}
+
+//-------------------------------------------------
+// Color fetching
+//
+// makes it easier to fetch color values
+// without nested map-gets all over our CSS
+//
+// @param color
+// @param variant
+
+@function color($color, $color-variant: '') {
+	@if($color-variant != ''){
+		@return map-get($colors, #{$color}-#{$color-variant});
+
+	} @else {
+		@return map-get($colors, $color);
+	}
+}
+
+
+
+//-------------------------------------------------
+// Variables
+
+//light	+30%
+//deep	-10%
+//dark	-30%
+
+$colors: (
+	'black': #222,
+	'black-light': #555,
+	'black-deep': #000,
+	'black-dark': #000,
+
+	'blue': #00abc0,
+	'blue-light': #4df8ff,
+	'blue-deep': #0092a7,
+	'blue-dark': #005f74,
+
+	'green': #2ecc71,
+	'green-light': #7bffbe,
+	'green-deep': #15b358,
+	'green-dark': #008025,
+
+	'orange': #e67e22,
+	'orange-light': #ffcb6f,
+	'orange-deep': #cd6509,
+	'orange-dark': #9a3200,
+
+	'pink': #ff3596,
+	'pink-light': #ff82e3,
+	'pink-deep': #e61c7d,
+	'pink-dark': #b3004a,
+
+	'purple': #9b59b6,
+	'purple-light': #e8a6ff,
+	'purple-deep': #82409d,
+	'purple-dark': #4f0d6a,
+
+	'red': #e74c3c,
+	'red-light': #ff6656,
+	'red-deep': #ce3323,
+	'red-dark': #9b0000,
+
+	'teal': #1abc9c,
+	'teal-light': #67ffe9,
+	'teal-deep': #01a383,
+	'teal-dark': #007050,
+
+	'white': #fff,
+	'white-light': #fff,
+	'white-deep': #f0f0f0,
+	'white-dark': #b3b3b3
+);
+
+//a couple random colors
+$color-off-white:		#ddd;
+$color-grey:			#eee;
+
+$font-mono:				'Fira Mono', Consolas, Monaco, monospace;
+
+$font-regular:			400;
+$font-bold:				700;
+
+$line-height:			1.5;
+
+$transition-speed:		.3s;
+$transition-speed-slow:	.75s;
+
+$screen-mobile:			37.5em;		//600px
+$screen-desktop:		75em;		//1200px
