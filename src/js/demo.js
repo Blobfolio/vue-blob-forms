@@ -2,7 +2,13 @@
 
 var app = new Vue({
 	el: '#vue-app',
-	data: {},
+	data: {
+		dateField: '',
+		emailField: '',
+		telField: '',
+		textareaField: '',
+		textField: '',
+	},
 	methods: {
 	},
 });

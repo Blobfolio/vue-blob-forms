@@ -12,7 +12,28 @@
 	<div class="wrapper" id="vue-app">
 		<form name="demo" v-blob-forms>
 			<fieldset>
-				<input v-blob-fields type="text" name="foobar" required />
+				<label for="demo-textField">Text Input</label>
+				<input type="text" name="textField" id="demo-textField" v-model.trim="textField" minlength="10" maxlength="20" required />
+			</fieldset>
+
+			<fieldset>
+				<label for="demo-emailField">Email Input</label>
+				<input type="email" name="emailField" id="demo-emailField" v-model.trim="emailField" required />
+			</fieldset>
+
+			<fieldset>
+				<label for="demo-telField">Phone Input</label>
+				<input type="tel" name="telField" id="demo-telField" v-model.trim="telField" minlength="10" maxlength="20" required />
+			</fieldset>
+
+			<fieldset>
+				<label for="demo-textareaField">Textarea Input</label>
+				<textarea name="textareaField" id="demo-textareaField" v-model.trim="textareaField" maxlength="100"></textarea>
+			</fieldset>
+
+			<fieldset>
+				<label for="demo-dateField">Date Input</label>
+				<input type="date" name="dateField" id="demo-dateField" v-model.trim="dateField" minlength="10" maxlength="20" required />
 			</fieldset>
 		</form>
 	</div><!--#vue-app-->
