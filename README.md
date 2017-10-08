@@ -9,6 +9,7 @@
  * [Installation](#installation)
  * [Form and Field Validation](#form-and-field-validation)
  * [Phone Number Formatting](#phone-number-formatting)
+ * [blob-select](#blob-select)
  * [Gravatar](#gravatar)
  * [License](#license)
 
@@ -220,6 +221,46 @@ If the phone number is valid and parseable, it will be returned in international
 <div class="phone">
     Phone Number: {{ myPhone | phone('GB') }}
 </div>
+```
+
+&nbsp;
+
+## blob-select
+
+`vue-blob-forms` comes with a wrapper for [blob-select](https://github.com/Blobfolio/blob-select). To use this feature, download and add the `blob-select` library to your project.
+
+### Directive: v-blobselect
+
+Normally, `blob-select` is initialized on an element because it includes a `data-blobselect` attribute. To do it the Vue way, replace that with `v-blobselect`.
+
+Note: if the element is conditionally rendered via `v-if`, etc., you will probably need to add a unique `key` attribute to the `<SELECT>` field's parent container, otherwise Vue's cache will get confused.
+
+```html
+<div v-if="showingSelect" key="myFirstSelect">
+    <select name="myFirstSelect" v-blobselect></select>
+</div>
+```
+
+#### Arguments
+
+The following optional arguments can be passed with the directive to alter the behavior of the element:
+
+| Type | Name | Description | Default |
+| ---- | ---- | ----------- | ------- |
+| *string* | orderType | Resort options based on their values. Can be `string` or `numeric`. | `NULL` (no sorting) |
+| *string* | order | Sort `ASC` or `DESC`. Only applies if `orderType` is set. | `ASC` |
+| *string* | placeholder | Text to display when no value is selected. | `---` |
+| *string* | placeholderOption | Text to use for the placeholder dropdown label. | `---` |
+| *bool* | search | Enable search. | `FALSE` |
+| *int* | watch | Check for DOM changes every X milliseconds and repaint if needed. | `0` (disabled) |
+| *bool* | debug | Print event activity to the console log. | `FALSE` |
+
+#### Example
+
+```html
+<select v-blobselect="{placeholder: 'Choose Something'}">
+    ...
+</select>
 ```
 
 &nbsp;

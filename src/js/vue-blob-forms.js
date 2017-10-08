@@ -94,14 +94,15 @@
 				// a duplicate of _loadFields(), but Vue has trouble
 				// setting data correctly when this particular piece is
 				// passed to another function.
-				var observer = new MutationObserver(function(mutations) {
+				var observer = new MutationObserver(_debounce(function(mutations) {
 					// Set up some variables.
 					var fieldKeys = Object.keys(vnode.context.blobFields[name]),
 						errorKeys = Object.keys(vnode.context.blobErrors[name]),
 						fieldName,
-						mutants,
-						tmp,
-						changed = false;
+						tmp;
+
+					var newFields = {},
+						removedFields = {};
 
 					// Loop through mutations.
 					for (i=0; i<mutations.length; i++) {
@@ -112,10 +113,12 @@
 							// or it might be a wrapper containing
 							// field(s). Have to annoyingly search to
 							// see.
-							mutants = {};
 							fieldName = _isField(mutations[i].addedNodes[j]);
 							if (fieldName) {
-								mutants[fieldName] = mutations[i].addedNodes[j];
+								if (typeof removedFields[fieldName] !== 'undefined') {
+									delete(removedFields[fieldName]);
+								}
+								newFields[fieldName] = mutations[i].addedNodes[j];
 							}
 							else {
 								try {
@@ -124,56 +127,30 @@
 										for (k=0; k<tmp.length; k++) {
 											fieldName = _isField(tmp[k]);
 											if (fieldName) {
-												mutants[fieldName] = tmp[k];
+												if (typeof removedFields[fieldName] !== 'undefined') {
+													delete(removedFields[fieldName]);
+												}
+												newFields[fieldName] = tmp[k];
 											}
 										}
 									}
 								} catch (Ex) {}
 							}
-
-							// Assuming we found one or more elements,
-							// let's loop through and add anything new.
-							mutantKeys = Object.keys(mutants);
-							for (k=0; k<mutantKeys.length; k++) {
-								fieldName = mutantKeys[k];
-								if (fieldName && fieldKeys.indexOf(fieldName) === -1) {
-									changed = true;
-									fieldKeys.push(fieldName);
-
-									Vue.set($scope[name].blobFields[name], fieldName, {
-										name: fieldName,
-										el: mutants[mutantKeys[k]],
-										originalValue: _checksum(mutants[mutantKeys[k]]),
-										changed: false,
-										touched: false,
-										valid: true,
-										$lock: false,
-									});
-
-									// Bind an input listener to monitor
-									// blur, AKA what we're calling
-									// "touched".
-									/* jshint ignore:start */
-									mutants[mutantKeys[k]].addEventListener('blur', function (e) {
-										Vue.nextTick(function() {
-											_validateField(el, e.target, true);
-										});
-									});
-									/* jshint ignore:end */
-								}
-							}
 						}
 
 						// Removed fields?
 						for (j=0; j<mutations[i].removedNodes.length; j++) {
+
 							// The removed node might itself be a field,
 							// or it might be a wrapper containing
 							// field(s). Have to annoyingly search to
 							// see.
-							mutants = {};
 							fieldName = _isField(mutations[i].removedNodes[j]);
 							if (fieldName) {
-								mutants[fieldName] = mutations[i].removedNodes[j];
+								if (typeof newFields[fieldName] !== 'undefined') {
+									delete(newFields[fieldName]);
+								}
+								removedFields[fieldName] = mutations[i].removedNodes[j];
 							}
 							else {
 								try {
@@ -182,50 +159,83 @@
 										for (k=0; k<tmp.length; k++) {
 											fieldName = _isField(tmp[k]);
 											if (fieldName) {
-												mutants[fieldName] = tmp[k];
+												if (typeof newFields[fieldName] !== 'undefined') {
+													delete(newFields[fieldName]);
+												}
+												removedFields[fieldName] = tmp[k];
 											}
 										}
 									}
 								} catch (Ex) {}
 							}
-
-							// Assuming we found one or more elements,
-							// let's loop through and remove them from
-							// our data.
-							mutantKeys = Object.keys(mutants);
-							for (k=0; k<mutantKeys.length; k++) {
-								fieldName = mutantKeys[k];
-								if (fieldName) {
-									// Remove event listeners.
-									try {
-										var fieldEvents = getEventListeners(mutants[mutantKeys[k]]);
-										for (l=0; l<fieldEvents.length; l++) {
-											fieldEvents[l].remove();
-										}
-									} catch (Ex) {}
-
-									// Remove field.
-									if (fieldKeys.indexOf(fieldName) !== -1) {
-										changed = true;
-										Vue.delete($scope[name].blobFields[name], fieldName);
-									}
-									// Remove error.
-									if (errorKeys.indexOf(fieldName) !== -1) {
-										changed = true;
-										Vue.delete($scope[name].blobErrors[name], fieldName);
-									}
-								}
-							}
-						}
-
-						// Force Vue to update as it doesn't tend to
-						// notice deep object changes right away.
-						if (changed) {
-							vnode.context.$forceUpdate();
-							_updateFormClasses(el);
 						}
 					}
-				});
+
+					// Did we collect any noteworthy mutations?
+					var newFieldKeys = Object.keys(newFields),
+						removedFieldKeys = Object.keys(removedFields);
+
+					// Loop through and setup new fields.
+					for (i=0; i<newFieldKeys.length; i++) {
+						fieldName = newFieldKeys[i];
+
+						// But only if the field isn't already in the
+						// data.
+						if (fieldName && fieldKeys.indexOf(fieldName) === -1) {
+							fieldKeys.push(fieldName);
+							var newField = newFields[newFieldKeys[i]];
+
+							Vue.set($scope[name].blobFields[name], fieldName, {
+								name: fieldName,
+								el: newField,
+								originalValue: _checksum(newField.value),
+								changed: false,
+								touched: false,
+								valid: true,
+								$lock: false,
+							});
+
+							// Bind an input listener to monitor blur,
+							// AKA what we're calling "touched".
+							/* jshint ignore:start */
+							newField.addEventListener('blur', function (e) {
+								Vue.nextTick(function() {
+									_validateField(el, e.target, true);
+								});
+							});
+							/* jshint ignore:end */
+						}
+					}
+
+					// Loop through and remove old fields.
+					for (i=0; i<removedFieldKeys.length; i++) {
+						fieldName = removedFieldKeys[i];
+
+						// Remove event listeners.
+						try {
+							var fieldEvents = getEventListeners(removedFields[removedFieldKeys[i]]);
+							for (j=0; j<fieldEvents.length; j++) {
+								fieldEvents[j].remove();
+							}
+						} catch (Ex) {}
+
+						// Remove field.
+						if (fieldKeys.indexOf(fieldName) !== -1) {
+							Vue.delete($scope[name].blobFields[name], fieldName);
+						}
+						// Remove error.
+						if (errorKeys.indexOf(fieldName) !== -1) {
+							Vue.delete($scope[name].blobErrors[name], fieldName);
+						}
+					}
+
+					// Force Vue to update as it doesn't tend to notice
+					// deep object changes right away.
+					if (newFields.length || removedFieldKeys.length) {
+						vnode.context.$forceUpdate();
+						_updateFormClasses(el);
+					}
+				}, 50));
 				observer.observe(el, {childList: true, subtree: true});
 
 				// Bind an input listener to monitor changes, but only
@@ -411,6 +421,45 @@
 					updatePhone();
 				});
 			}
+		});
+
+		/**
+		 * v-blobselect
+		 *
+		 * Wrapper for blob-select.
+		 *
+		 * @see https://github.com/Blobfolio/blob-phone
+		 *
+		 * @param string $country Country code.
+		 */
+		Vue.directive('blobselect', {
+			id: 'blobselect',
+			priority: 50000,
+			inserted: function(el, binding){
+				// This must be a select field.
+				if (
+					!el.nodeName ||
+					(el.nodeName !== 'SELECT')
+				) {
+					return;
+				}
+
+				// The blob-phone library must be loaded.
+				if (!('blobSelect' in HTMLSelectElement.prototype)) {
+					console.warn('v-blobselect requires the blob-select Javascript library.' + "\n" + 'https://github.com/Blobfolio/blob-select');
+					return;
+				}
+
+				// Figure out the arguments.
+				var args = binding.value || null;
+				if (typeof args !== 'object') {
+					args = null;
+				}
+
+				Vue.nextTick(function() {
+					el.blobSelect.init(args);
+				});
+			},
 		});
 
 		// ------------------------------------------------------------- end directive

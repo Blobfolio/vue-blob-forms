@@ -7,6 +7,7 @@
 
 	<link rel='shortcut icon' type='image/x-icon' href='assets/favicon.ico' />
 	<link rel="stylesheet" href="assets/demo.css" media="all">
+	<link rel="stylesheet" href="assets/blobselect.css" media="all">
 </head>
 <body>
 	<div class="wrapper" id="vue-app" v-cloak>
@@ -218,6 +219,34 @@
 							<div class="error-message" v-if="formErrors('demo', 'multiselectField')">{{ formErrors('demo', 'multiselectField') }}</div>
 						</td>
 					</tr>
+					<tr v-if="showingToggle">
+						<td>
+							<label for="demo-blobSelectField">blob-select</label>
+						</td>
+						<td key="blobselect">
+							<select v-blobselect="{placeholder: 'Choose a food.', placeholderOption: 'I choose None!'}" v-model.trim="fields.select" required name="blobSelectField" id="demo-blobSelectField">
+								<option value=""></option>
+								<option value="apple">Apple</option>
+								<option value="banana">Banana</option>
+								<option value="carrot">Carrot</option>
+							</select>
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'blobSelectField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'blobSelectField')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'blobSelectField')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'blobSelectField')">{{ formErrors('demo', 'blobSelectField') }}</div>
+						</td>
+					</tr>
 					<tr>
 						<td>
 							<label for="demo-beatleField">Custom</label>
@@ -267,7 +296,7 @@
 				</tbody>
 				<tfoot>
 					<tr>
-						<th scope="row">Form</th>
+						<th scope="row">Form-Wide</th>
 						<td></td>
 						<td>
 							<span v-if="formTouched('demo')">Yes</span>
@@ -299,6 +328,7 @@
 	</div><!--#vue-app-->
 
 	<script src="assets/blob-phone.min.js"></script>
+	<script src="assets/blobselect.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.4/vue.js"></script>
 	<script src="assets/vue-blob-forms.min.js"></script>
 	<script src="assets/demo.min.js"></script>
