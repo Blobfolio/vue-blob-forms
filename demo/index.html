@@ -5,13 +5,14 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 	<meta content="width=device-width,initial-scale=1,user-scalable=0,minimum-scale=1,maximum-scale=1" name="viewport">
 
+	<link rel='shortcut icon' type='image/x-icon' href='assets/favicon.ico' />
 	<link rel="stylesheet" href="assets/demo.css" media="all">
 </head>
 <body>
 	<div class="wrapper" id="vue-app" v-cloak>
 		<h1>vue-blob-forms</h1>
 
-		<form name="demo" v-blob-forms>
+		<form name="demo" v-form>
 			<table class="demo" cellspacing="0" cellpadding="0">
 				<thead>
 					<tr>
@@ -52,7 +53,7 @@
 							<label for="demo-emailField">Email</label>
 						</td>
 						<td>
-							<input v-model.trim="fields.email" type="email" placeholder="user@domain.com" required name="emailField" id="demo-emailField" />
+							<input v-gravatar v-model.trim="fields.email" type="email" placeholder="user@domain.com" required name="emailField" id="demo-emailField" />
 						</td>
 						<td>
 							<span v-if="formTouched('demo', 'emailField')">Yes</span>
@@ -98,7 +99,7 @@
 							<label for="demo-telField">Tel</label>
 						</td>
 						<td>
-							<input v-model.trim="fields.tel" type="tel" placeholder="(123) 456-7890" minlength="10" required name="telField" id="demo-telField" />
+							<input v-model.trim="fields.tel" type="tel" placeholder="(123) 456-7890" minlength="10" required name="telField" id="demo-telField" v-phone />
 						</td>
 						<td>
 							<span v-if="formTouched('demo', 'telField')">Yes</span>
@@ -217,6 +218,29 @@
 							<div class="error-message" v-if="formErrors('demo', 'multiselectField')">{{ formErrors('demo', 'multiselectField') }}</div>
 						</td>
 					</tr>
+					<tr v-if="showingToggle">
+						<td>
+							<label for="demo-toggLefield">Toggled</label>
+						</td>
+						<td>
+							<input v-model.trim="fields.toggle" type="text" maxlength="50" required name="toggLefield" id="demo-toggLefield" />
+						</td>
+						<td>
+							<span v-if="formTouched('demo', 'toggLefield')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formChanged('demo', 'toggLefield')">Yes</span>
+							<span v-else class="fg-black-light">No</span>
+						</td>
+						<td>
+							<span v-if="formValid('demo', 'toggLefield')" class="fg-green">Yes</span>
+							<span v-else class="fg-red">No</span>
+						</td>
+						<td>
+							<div class="error-message" v-if="formErrors('demo', 'toggLefield')">{{ formErrors('demo', 'toggLefield') }}</div>
+						</td>
+					</tr>
 				</tbody>
 				<tfoot>
 					<tr>
@@ -245,11 +269,16 @@
 			</table>
 		</form>
 
-		<button v-on:click.prevent="validateForm('demo')">Check All</button>
+		<div class="demo--actions">
+			<button v-on:click.prevent="validateForm('demo')" class="fg-white bg-pink bg-purple-hover">Check All</button>
+			<button v-on:click.prevent="showingToggle = !showingToggle" class="fg-white bg-blue bg-purple-hover">Toggle Field</button>
+		</div>
 	</div><!--#vue-app-->
 
+	<script src="assets/blob-phone.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.4/vue.js"></script>
 	<script src="assets/vue-blob-forms.min.js"></script>
 	<script src="assets/demo.min.js"></script>
+
 </body>
 </html>

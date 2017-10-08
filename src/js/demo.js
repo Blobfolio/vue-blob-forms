@@ -1,5 +1,15 @@
+/**
+ * Demo: vue-blob-forms
+ *
+ * This is a quick little demonstration of different field types and
+ * methods.
+ *
+ * @see https://blobfolio.com
+ * @see https://github.com/Blobfolio/vue-blob-forms
+ */
 (function(){
 
+// Set up Vue with some basic data.
 var app = new Vue({
 	el: '#vue-app',
 	data: {
@@ -10,6 +20,7 @@ var app = new Vue({
 			tel: '',
 			text: '',
 			textarea: '',
+			toggled: '',
 			select: '',
 			multiselect: [],
 		},
@@ -17,6 +28,7 @@ var app = new Vue({
 		dateMax: '2018-01-01',
 		numMin: 1,
 		numMax: 10,
+		showingToggle: false,
 	},
 	methods: {
 	},
