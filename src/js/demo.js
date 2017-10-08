@@ -14,6 +14,7 @@ var app = new Vue({
 	el: '#vue-app',
 	data: {
 		fields: {
+			beatle: 'Yellow Submarine',
 			date: '2020-01-01',
 			email: '',
 			number: 0,
@@ -29,8 +30,24 @@ var app = new Vue({
 		numMin: 1,
 		numMax: 10,
 		showingToggle: false,
+		beatlesMovies: [
+			"aharddaysnight",
+			"help",
+			"magicalmysterytour",
+			"yellowsubmarine",
+			"letitbe",
+		]
 	},
 	methods: {
+		// See if a film is part of the Beatles' catalogue or not.
+		validateBeatlesMovie: function(film) {
+			film = (film + '').trim().toLowerCase().replace(/[^a-z]/g, '');
+			if (this.beatlesMovies.indexOf(film) !== -1) {
+				return true;
+			}
+
+			return 'A valid Beatles movie title is required.';
+		}
 	},
 });
 
