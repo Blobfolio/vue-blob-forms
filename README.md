@@ -54,7 +54,7 @@ This method can be used to retrieve all errors for a given form, or an error for
 | Type | Name | Description |
 | ---- | ---- | ----------- |
 | *string* | formName | The name of the form. |
-| *string* *optional* | fieldName | The name of the field. |
+| *string* (optional) | fieldName | The name of the field. |
 
 #### Returns
 
@@ -81,13 +81,13 @@ For the purposes of this plugin, a "touch" occurs when a field receives input or
 | Type | Name | Description |
 | ---- | ---- | ----------- |
 | *string* | formName | The name of the form. |
-| *string* *optional* | fieldName | The name of the field. |
+| *string* (optional) | fieldName | The name of the field. |
 
 #### Returns
 
 When only `formName` is passed, the method returns `TRUE` if any of its fields have been touched, otherwise `FALSE`.
 
-When `fieldName` is passed, `TRUE` or `FALSE` are returned based on the specific state of the field.
+When `fieldName` is passed, `TRUE` or `FALSE` are returned based on the state of the specific field.
 
 #### Example
 
@@ -208,7 +208,7 @@ Note: this can be used independently of any form or field elements.
 | Type | Name | Description | Default |
 | ---- | ---- | ----------- | ------- |
 | *string* | phone | Phone number. | |
-| *string* *optional* | country | A country code. | `US` |
+| *string* (optional) | country | A country code. | `US` |
 
 #### Returns
 
@@ -251,7 +251,7 @@ Find a Gravatar image URL for a given email address.
 | Type | Name | Description | Default |
 | ---- | ---- | ----------- | ------- |
 | *string* | email | Email address. | |
-| *string* *optional* | Size | The pixel size to return. | `80` |
+| *string* (optional) | Size | The pixel size to return. | `80` |
 
 #### Returns
 
