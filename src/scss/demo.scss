@@ -1,5 +1,8 @@
 /**
- * Styles for the Demo!
+ * Demo: vue-blob-forms
+ *
+ * @see https://blobfolio.com
+ * @see https://github.com/Blobfolio/vue-blob-forms
  */
 
 // ---------------------------------------------------------------------
@@ -121,17 +124,60 @@ select[multiple] {
 	height: 75px;
 }
 
+input[type=email] {
+	background-position: calc(100% - 5px) 5px;
+	background-size: 28px 28px;
+	background-repeat: no-repeat;
+}
+
+input[type=date],
+input[type=datetime-local],
+input[type=time] {
+	&::-webkit-inner-spin-button {
+		height: 40px;
+	}
+	&::-webkit-calendar-picker-indicator {
+		width: 15px;
+		height: 10px;
+		background: transparent;
+		color: color('pink');
+
+		&:hover {
+			color: color('pink');
+			background: transparent;
+		}
+	}
+}
+
 button {
-	background-color: color('blue');
-	color: color('white');
 	text-transform: uppercase;
 	font-weight: $font-bold;
+
+	transition: color .3s,
+		background .3s;
+
+	cursor: pointer;
 
 	display: block;
 	height: 40px;
 	vertical-align: middle;
 	line-height: 40px;
 	padding: 0 20px;
+
+	& + button {
+		margin-left: 1em;
+	}
+}
+
+label {
+	display: block;
+	cursor: pointer;
+}
+
+.demo--actions {
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 // --------------------------------------------------------------------- end form
@@ -163,11 +209,14 @@ button {
 		text-transform: uppercase;
 	}
 
-	tbody,
-	tfoot {
-		th, td {
-			border-top: 1px dashed $color-grey;
-		}
+	tbody th,
+	tbody td, {
+		border-top: 1px dashed $color-grey;
+	}
+
+	tfoot th,
+	tfoot td, {
+		border-top: 1px dashed color('pink');
 	}
 }
 
