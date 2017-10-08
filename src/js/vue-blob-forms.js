@@ -230,17 +230,17 @@
 
 				// Bind an input listener to monitor changes, but only
 				// act if we have an INPUT or TEXTAREA field.
-				el.addEventListener('input', function (e) {
+				el.addEventListener('input', _debounce(function (e) {
 					Vue.nextTick(function() {
 						if ((e.target.tagName !== 'SELECT') && (false !== _isField(e.target))) {
 							_validateField(el, e.target, true);
 						}
 					});
-				});
+				}, 100));
 
 				// For SELECT fields, we'll use a change listener
 				// instead. This fixes a bug with Vue + Chrome.
-				el.addEventListener('change', function (e) {
+				el.addEventListener('change', _debounce(function (e) {
 					Vue.nextTick(function() {
 						if ((e.target.tagName === 'SELECT') && (false !== _isField(e.target))) {
 							// The timeout fixes another SELECT bug,
@@ -250,7 +250,7 @@
 							}, 50);
 						}
 					});
-				});
+				}, 100));
 
 				// Let's assume we have no fields yet and load our data.
 				Vue.nextTick(function(){
@@ -388,17 +388,17 @@
 
 							// Update the model.
 							Vue.set(model, modelTop, valueNew);
-
-							// Update the country.
-							if (country !== countryNew) {
-								el.setAttribute('data-country', countryNew);
-							}
 						}
-						else {
-							// Remove the country.
-							if (country) {
-								el.setAttribute('data-country', '');
-							}
+
+						// Update the country.
+						if (country !== countryNew) {
+							el.setAttribute('data-country', countryNew);
+						}
+					}
+					else {
+						// Remove the country.
+						if (country) {
+							el.setAttribute('data-country', '');
 						}
 					}
 
