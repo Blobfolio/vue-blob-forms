@@ -224,7 +224,7 @@
 							<label for="demo-blobSelectField">blob-select</label>
 						</td>
 						<td key="blobselect">
-							<select v-blobselect="{placeholder: 'Choose a food.', placeholderOption: 'I choose None!'}" v-model.trim="fields.select" required name="blobSelectField" id="demo-blobSelectField">
+							<select v-blobselect="{placeholder: 'Choose a food.', placeholderOption: 'I choose None!', watch: 250}" v-model.trim="fields.select" required name="blobSelectField" id="demo-blobSelectField">
 								<option value=""></option>
 								<option value="apple">Apple</option>
 								<option value="banana">Banana</option>
