@@ -302,9 +302,9 @@
 
 					var updateEmail = _debounce(function(){
 						// Make sure the field value makes sense.
-						var email = (el.value + '' || '').trim().toLowerCase(),
+						var email = (el.value || '').trim().toLowerCase(),
 							hash = '334c4a4c42fdb79d7ebc3e73b517e6f8',
-							oldHash = el.dataset.hash + '' || '';
+							oldHash = el.dataset.hash || '';
 
 						// Calculate the hash if the email seems
 						// email-like.
@@ -359,7 +359,7 @@
 				}
 
 				// Sort out the default country.
-				var defaultCountry = (binding.value + '').toUpperCase() || 'US';
+				var defaultCountry = (binding.value || '').toUpperCase() || 'US';
 				if (defaultCountry.length !== 2) {
 					defaultCountry = 'US';
 				}
@@ -367,10 +367,10 @@
 				// Our update handler.
 				var updatePhone = _debounce(function(){
 					// Make sure the field value makes sense.
-					var value = (el.value + '' || '').trim(),
+					var value = (el.value || '').trim(),
 						valueNew = '',
 						valid = false,
-						country = el.dataset.country + '' || '',
+						country = el.dataset.country || '',
 						countryNew = '';
 
 					// First, come up with a formatted value, if
@@ -381,6 +381,14 @@
 							valueNew = parsed.number;
 							countryNew = parsed.country;
 							valid = true;
+
+							// Already checked, already fine.
+							if (
+								(parsed.number === el.dataset.blobPhoneValue) &&
+								(country === countryNew)
+							) {
+								return;
+							}
 						}
 					}
 
@@ -398,6 +406,9 @@
 
 							// Update the model.
 							Vue.set(model, modelTop, valueNew);
+							value = valueNew;
+
+							vnode.context.$forceUpdate();
 						}
 
 						// Update the country.
@@ -412,13 +423,27 @@
 						}
 					}
 
+					// Store the checked values so we can skip this
+					// later.
+					if (el.dataset.blobPhoneValue !== value) {
+						el.setAttribute('data-blob-phone-value', value);
+					}
+
+					valid = valid ? 1 : 0;
+					var lastValid = parseInt(el.dataset.blobPhoneValid, 10) || 0;
+					if (valid !== lastValid) {
+						el.setAttribute('data-blob-phone-valid', valid);
+					}
+
 				}, 500);
 
 				// If libphonenumber-js is already here, let's just
 				// do what needs doing.
 				Vue.nextTick(function() {
 					el.addEventListener('input', updatePhone);
-					updatePhone();
+					Vue.nextTick(function() {
+						updatePhone();
+					});
 				});
 			}
 		});
@@ -681,7 +706,8 @@
 		 */
 		Vue.prototype.gravatarURL = function(email, size) {
 			// Make sure the data makes sense.
-			email = (email + '' || '').trim().toLowerCase();
+			email = email ? email + '' : '';
+			email = email.trim().toLowerCase();
 			size = parseInt(size, 10) || 0;
 			if (size <= 0) {
 				size = 80;
@@ -758,7 +784,7 @@
 			// Before we start validating, let's reset the error holder
 			// to clear any arbitrary messages a user might have
 			// injected.
-			this.blobErrors[name] = {};
+			$scope[name].blobErrors[name] = {};
 
 			// Loop through and validate each field.
 			var fieldKeys = Object.keys($scope[name].blobFields[name]);
@@ -801,7 +827,31 @@
 
 			// Make sure the field is valid.
 			var fieldName = _isField(field);
-			if (!field || $scope[name].blobFields[name][fieldName].$lock) {
+			if (!field) {
+				return false;
+			}
+
+			// Vue might mess up event trigger ordering when forms are
+			// conditionally displayed. If the data doesn't exist yet
+			// we can go ahead and create it.
+			if (typeof $scope[name].blobFields[name][fieldName] === 'undefined') {
+				console.warn('Missing Field Data: ' + name + '.' + fieldName);
+
+				// Save the data.
+				Vue.set($scope[name].blobFields[name], fieldName, {
+					name: fieldName,
+					el: field,
+					originalValue: _checksum(field.value),
+					changed: false,
+					touched: false,
+					valid: true,
+					$lock: false,
+				});
+				$scope[name].$forceUpdate();
+			}
+
+			// If this is locked, get out of here.
+			if ($scope[name].blobFields[name][fieldName].$lock) {
 				return false;
 			}
 
@@ -858,11 +908,30 @@
 				valid &&
 				('tel' === field.getAttribute('type'))
 			) {
-				var country = (field.dataset.country + '').toUpperCase() || 'US';
-				if (country.length !== 2) {
-					country = 'US';
+				var lastValue = (field.dataset.blobPhoneValue) || '',
+					lastValid = parseInt(field.dataset.blobPhoneValid, 10) || 0;
+
+				// We need to reparse.
+				if (lastValue !== fieldValue) {
+					var country = (field.dataset.country || '').toUpperCase() || 'US';
+					if (country.length !== 2) {
+						country = 'US';
+					}
+
+					if (false !== blobPhone.parse(fieldValue, country)) {
+						field.setAttribute('data-blob-phone-value', fieldValue);
+						field.setAttribute('data-blob-phone-valid', 1);
+					}
+					else {
+						field.setAttribute('data-blob-phone-value', fieldValue);
+						field.setAttribute('data-blob-phone-valid', 0);
+						valid = false;
+					}
 				}
-				valid = (false !== blobPhone.parse(fieldValue, country));
+				else {
+					valid = (lastValid === 1);
+				}
+
 				if (!valid) {
 					field.setCustomValidity('Please enter a valid phone number.');
 				}
