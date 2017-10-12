@@ -71,6 +71,32 @@ When `fieldName` is passed, the method will return the error corresponding to th
 </div>
 ```
 
+
+### Method: setFormErrors()
+
+This method can be used to set arbitrary form errors. The errors do not necessarily need to correspond to a field, but the form must be a valid `v-form` element.
+
+#### Arguments
+
+| Type | Name | Description |
+| ---- | ---- | ----------- |
+| *string* | formName | The name of the form. |
+| *object* | errors | An object with keys relating to fields or error codes, and values being errors strings. |
+
+#### Returns
+
+This method will update the form errors and return `TRUE`, or `FALSE` if bad arguments were passed.
+
+#### Example
+
+```javascript
+var errors = {
+    fieldOne: 'This is all wrong.',
+    fieldTwo: 'This too is not correct.',
+};
+this.setFormErrors('myForm', errors);
+```
+
 ### Method: formTouched()
 
 This method can be used to determine whether or not a form or a specific field has been "touched".
@@ -130,7 +156,7 @@ Note: `FALSE` is also returned if the form name is invalid or not bound to the `
 </form>
 ```
 
-```js
+```javascript
 submitForm = function() {
     if (!this.validateForm('myForm')) {
         return false;
@@ -154,7 +180,7 @@ If the value is valid, the function should return `TRUE`, otherwise it should re
 <input type="text" data-custom-callback="validateUsername" />
 ```
 
-```js
+```javascript
 validateUsername = function(value) {
     if (this.users.indexOf(value) !== -1) {
         return true;

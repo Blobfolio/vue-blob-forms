@@ -593,6 +593,84 @@
 		};
 
 		/**
+		 * Set Errors
+		 *
+		 * Pass arbitrary errors to a form. These do not necessarily
+		 * have to correspond to fields, but they must correspond to
+		 * a v-form.
+		 *
+		 * @param string $name Form name.
+		 * @param object $errors Errors.
+		 * @return bool True/false.
+		 */
+		Vue.prototype.setFormErrors = function(name, errors) {
+			// Make sure the form is valid.
+			if (!name || (typeof this.blobErrors[name] === 'undefined')) {
+				return false;
+			}
+
+			// This should be a keyed object.
+			if (
+				(typeof errors !== 'object') ||
+				(errors === null) ||
+				Array.isArray(errors)
+			) {
+				return false;
+			}
+
+			var fields = Object.keys(this.blobFields[name]),
+				keys = Object.keys(errors),
+				changed = false;
+
+			// Again, exit if the data is bad.
+			if (!keys.length) {
+				return false;
+			}
+
+			// Loop through everything!
+			for (i=0; i<keys.length; i++) {
+				var key = keys[i],
+					value = errors[keys[i]];
+
+				// Bad error?
+				if (!value || (typeof value !== 'string')) {
+					continue;
+				}
+
+				changed = true;
+
+				// Record the main error.
+				this.blobErrors[name][key] = value;
+
+				// If this is a field, we should also update its
+				// validity details.
+				if (fields.indexOf(key) !== -1) {
+					// Update internal meta.
+					if (this.blobFields[name][key].valid) {
+						Vue.set(this.blobFields[name][key], 'valid', false);
+					}
+					if (this.blobFields[name][key].el.classList.contains('is-valid')) {
+						this.blobFields[name][key].el.classList.remove('is-valid');
+					}
+					if (!this.blobFields[name][key].el.classList.contains('is-invalid')) {
+						this.blobFields[name][key].el.classList.add('is-invalid');
+					}
+
+					// And for good measure, the field's constraint error.
+					this.blobFields[name][key].el.setCustomValidity(value);
+				}
+			}
+
+			// If we made changes, update the form classes.
+			if (changed) {
+				this.$forceUpdate();
+				_updateFormClasses(this.blobForms[name].el);
+			}
+
+			return true;
+		};
+
+		/**
 		 * Gravatar URL
 		 *
 		 * Get a gravatar URL given an email address.
@@ -676,6 +754,11 @@
 
 			// Cast $touch to a boolean.
 			touch = !!touch;
+
+			// Before we start validating, let's reset the error holder
+			// to clear any arbitrary messages a user might have
+			// injected.
+			this.blobErrors[name] = {};
 
 			// Loop through and validate each field.
 			var fieldKeys = Object.keys($scope[name].blobFields[name]);
