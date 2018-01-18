@@ -177,7 +177,7 @@ If the value is valid, the function should return `TRUE`, otherwise it should re
 #### Example
 
 ```html
-<input type="text" data-custom-callback="validateUsername" />
+<input type="text" validation-callback="validateUsername" />
 ```
 
 ```javascript
