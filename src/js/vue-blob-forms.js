@@ -149,7 +149,7 @@
 				if (
 					el.nodeName &&
 					(el.nodeName === 'INPUT') &&
-					(el.type === 'email')
+					(el.getAttribute('type') === 'email')
 				) {
 					var size = parseInt(binding.value, 10) || 0,
 						gravatar = 'https://www.gravatar.com/avatar/';
@@ -206,7 +206,7 @@
 				if (
 					!el.nodeName ||
 					(el.nodeName !== 'INPUT') ||
-					(el.type !== 'tel')
+					(el.getAttribute('type') !== 'tel')
 				) {
 					return;
 				}
@@ -752,7 +752,7 @@
 			}
 
 			// Email-specific validation.
-			if (fieldValue.length && valid && ('email' === field.type)) {
+			if (fieldValue.length && valid && ('email' === field.getAttribute('type'))) {
 				valid = !!regexEmail.test(fieldValue);
 				if (!valid) {
 					field.setCustomValidity('Please enter a complete email address.');
@@ -764,7 +764,7 @@
 				('blobPhone' in window) &&
 				fieldValue.length &&
 				valid &&
-				('tel' === field.type)
+				('tel' === field.getAttribute('type'))
 			) {
 				var lastValue = (field.dataset.blobPhoneValue) || '',
 					lastValid = parseInt(field.dataset.blobPhoneValid, 10) || 0;
@@ -983,11 +983,11 @@
 		 * @return string|bool Name or false.
 		 */
 		function _isForm(el) {
-			if (!el.nodeName || (el.nodeName !== 'FORM') || !el.name) {
+			if (!el.nodeName || (el.nodeName !== 'FORM') || !el.getAttribute('name')) {
 				return false;
 			}
 
-			return el.name;
+			return el.getAttribute('name');
 		}
 
 		/**
@@ -1008,15 +1008,15 @@
 					(el.nodeName !== 'TEXTAREA')
 				) ||
 				el.disabled ||
-				!el.name ||
-				(el.type === 'button') ||
-				(el.type === 'submit') ||
-				(el.type === 'reset')
+				!el.getAttribute('name') ||
+				(el.getAttribute('type') === 'button') ||
+				(el.getAttribute('type') === 'submit') ||
+				(el.getAttribute('type') === 'reset')
 			) {
 				return false;
 			}
 
-			return el.name;
+			return el.getAttribute('name');
 		}
 
 		/**
@@ -1082,7 +1082,7 @@
 
 			for (i=0; i<fields.length; i++) {
 				// Verify the field we found has a valid name.
-				var fieldName = fields[i].name;
+				var fieldName = fields[i].getAttribute('name');
 				if (!fieldName) {
 					continue;
 				}
@@ -1172,7 +1172,7 @@
 		 * @return bool True/false.
 		 */
 		function _toggleClasses(el, good, bad, test) {
-			if (!el.name) {
+			if (!el.getAttribute('name')) {
 				return false;
 			}
 
@@ -1509,7 +1509,7 @@
 		function _getModelName(vnode) {
 			try {
 				return vnode.data.directives.find(function(o) {
-					return (o.name === 'model');
+					return (o.getAttribute('name') === 'model');
 				}).expression;
 			} catch (Ex) {
 				return false;
