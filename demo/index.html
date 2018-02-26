@@ -247,12 +247,12 @@
 							<div class="error-message" v-if="formErrors('demo', 'blobSelectField')">{{ formErrors('demo', 'blobSelectField') }}</div>
 						</td>
 					</tr>
-					<tr>
+					<tr key="beatles">
 						<td>
 							<label for="demo-beatleField">Custom</label>
 						</td>
 						<td>
-							<input v-model.trim="fields.beatle" type="text" maxlength="50" required name="beatleField" data-validation-callback="validateBeatlesMovie" placeholder="Enter a Beatles movie." id="demo-beatleField" />
+							<input v-model.trim="fields.beatle" type="text" maxlength="50" required name="beatleField" validation-callback="validateBeatlesMovie" placeholder="Enter a Beatles movie." id="demo-beatleField" />
 						</td>
 						<td>
 							<span v-if="formTouched('demo', 'beatleField')">Yes</span>
