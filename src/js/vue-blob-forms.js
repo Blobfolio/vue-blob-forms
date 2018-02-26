@@ -24,9 +24,6 @@
 		// Improved validation patterns.
 		var regexEmail = new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
 
-		// It is too easy to lose the vnode context with Vue directives.
-		var $scope = {};
-
 		// This will hold our form states.
 		Vue.prototype.blobForms = {};
 		Vue.prototype.blobFields = {};
@@ -63,10 +60,9 @@
 				}
 
 				// Don't want to validate the form the usual way.
-				el.setAttribute('novalidate', true);
-
-				// Save the scope so we have it later.
-				$scope[name] = vnode.context;
+				if (!el.getAttribute('novalidate')) {
+					el.setAttribute('novalidate', true);
+				}
 
 				// Set up the form object.
 				Vue.set(vnode.context.blobForms, name, {
@@ -94,147 +90,10 @@
 				// a duplicate of _loadFields(), but Vue has trouble
 				// setting data correctly when this particular piece is
 				// passed to another function.
-				var observer = new MutationObserver(_debounce(function(mutations) {
-					// Set up some variables.
-					var fieldKeys = Object.keys(vnode.context.blobFields[name]),
-						errorKeys = Object.keys(vnode.context.blobErrors[name]),
-						fieldName,
-						tmp;
-
-					var newFields = {},
-						removedFields = {};
-
-					// Loop through mutations.
-					for (i=0; i<mutations.length; i++) {
-
-						// New fields?
-						for (j=0; j<mutations[i].addedNodes.length; j++) {
-							// The added node might itself be a field,
-							// or it might be a wrapper containing
-							// field(s). Have to annoyingly search to
-							// see.
-							fieldName = _isField(mutations[i].addedNodes[j]);
-							if (fieldName) {
-								if (typeof removedFields[fieldName] !== 'undefined') {
-									delete(removedFields[fieldName]);
-								}
-								newFields[fieldName] = mutations[i].addedNodes[j];
-							}
-							else {
-								try {
-									tmp = mutations[i].addedNodes[j].querySelectorAll('input, select, textarea');
-									if (tmp.length) {
-										for (k=0; k<tmp.length; k++) {
-											fieldName = _isField(tmp[k]);
-											if (fieldName) {
-												if (typeof removedFields[fieldName] !== 'undefined') {
-													delete(removedFields[fieldName]);
-												}
-												newFields[fieldName] = tmp[k];
-											}
-										}
-									}
-								} catch (Ex) {}
-							}
-						}
-
-						// Removed fields?
-						for (j=0; j<mutations[i].removedNodes.length; j++) {
-
-							// The removed node might itself be a field,
-							// or it might be a wrapper containing
-							// field(s). Have to annoyingly search to
-							// see.
-							fieldName = _isField(mutations[i].removedNodes[j]);
-							if (fieldName) {
-								if (typeof newFields[fieldName] !== 'undefined') {
-									delete(newFields[fieldName]);
-								}
-								removedFields[fieldName] = mutations[i].removedNodes[j];
-							}
-							else {
-								try {
-									tmp = mutations[i].removedNodes[j].querySelectorAll('input, select, textarea');
-									if (tmp.length) {
-										for (k=0; k<tmp.length; k++) {
-											fieldName = _isField(tmp[k]);
-											if (fieldName) {
-												if (typeof newFields[fieldName] !== 'undefined') {
-													delete(newFields[fieldName]);
-												}
-												removedFields[fieldName] = tmp[k];
-											}
-										}
-									}
-								} catch (Ex) {}
-							}
-						}
-					}
-
-					// Did we collect any noteworthy mutations?
-					var newFieldKeys = Object.keys(newFields),
-						removedFieldKeys = Object.keys(removedFields);
-
-					// Loop through and setup new fields.
-					for (i=0; i<newFieldKeys.length; i++) {
-						fieldName = newFieldKeys[i];
-
-						// But only if the field isn't already in the
-						// data.
-						if (fieldName && fieldKeys.indexOf(fieldName) === -1) {
-							fieldKeys.push(fieldName);
-							var newField = newFields[newFieldKeys[i]];
-
-							Vue.set($scope[name].blobFields[name], fieldName, {
-								name: fieldName,
-								el: newField,
-								originalValue: _checksum(newField.value),
-								changed: false,
-								touched: false,
-								valid: true,
-								$lock: false,
-							});
-
-							// Bind an input listener to monitor blur,
-							// AKA what we're calling "touched".
-							/* jshint ignore:start */
-							newField.addEventListener('blur', function (e) {
-								Vue.nextTick(function() {
-									_validateField(el, e.target, true);
-								});
-							});
-							/* jshint ignore:end */
-						}
-					}
-
-					// Loop through and remove old fields.
-					for (i=0; i<removedFieldKeys.length; i++) {
-						fieldName = removedFieldKeys[i];
-
-						// Remove event listeners.
-						try {
-							var fieldEvents = getEventListeners(removedFields[removedFieldKeys[i]]);
-							for (j=0; j<fieldEvents.length; j++) {
-								fieldEvents[j].remove();
-							}
-						} catch (Ex) {}
-
-						// Remove field.
-						if (fieldKeys.indexOf(fieldName) !== -1) {
-							Vue.delete($scope[name].blobFields[name], fieldName);
-						}
-						// Remove error.
-						if (errorKeys.indexOf(fieldName) !== -1) {
-							Vue.delete($scope[name].blobErrors[name], fieldName);
-						}
-					}
-
-					// Force Vue to update as it doesn't tend to notice
-					// deep object changes right away.
-					if (newFields.length || removedFieldKeys.length) {
-						vnode.context.$forceUpdate();
-						_updateFormClasses(el);
-					}
+				var observer = new MutationObserver(_debounce(function(mutations, instance) {
+					Vue.nextTick(function(){
+						_loadFields.call(vnode.context, el, true);
+					});
 				}, 50));
 				observer.observe(el, {childList: true, subtree: true});
 
@@ -243,7 +102,7 @@
 				el.addEventListener('input', _debounce(function (e) {
 					Vue.nextTick(function() {
 						if ((e.target.tagName !== 'SELECT') && (false !== _isField(e.target))) {
-							_validateField(el, e.target, true);
+							_validateField.call(vnode.context, el, e.target, true);
 						}
 					});
 				}, 100));
@@ -256,7 +115,7 @@
 							// The timeout fixes another SELECT bug,
 							// this one affecting Edge. Haha.
 							setTimeout(function(){
-								_validateField(el, e.target, true);
+								_validateField.call(vnode.context, el, e.target, true);
 							}, 50);
 						}
 					});
@@ -264,9 +123,9 @@
 
 				// Let's assume we have no fields yet and load our data.
 				Vue.nextTick(function(){
-					_loadFields(el);
+					_loadFields.call(vnode.context, el);
 					Vue.nextTick(function() {
-						_validateForm(el);
+						_validateForm.call(vnode.context, el);
 					});
 				});
 
@@ -290,7 +149,7 @@
 				if (
 					el.nodeName &&
 					(el.nodeName === 'INPUT') &&
-					(el.getAttribute('type') === 'email')
+					(el.type === 'email')
 				) {
 					var size = parseInt(binding.value, 10) || 0,
 						gravatar = 'https://www.gravatar.com/avatar/';
@@ -347,7 +206,7 @@
 				if (
 					!el.nodeName ||
 					(el.nodeName !== 'INPUT') ||
-					(el.getAttribute('type') !== 'tel')
+					(el.type !== 'tel')
 				) {
 					return;
 				}
@@ -608,7 +467,7 @@
 			}
 
 			// Force (re)check all fields.
-			_validateForm(this.blobForms[name].el, true);
+			_validateForm.call(this, this.blobForms[name].el, true);
 
 			// See if we have any errors and report accordingly.
 			var errors = this.blobErrors[name] || {},
@@ -689,7 +548,7 @@
 			// If we made changes, update the form classes.
 			if (changed) {
 				this.$forceUpdate();
-				_updateFormClasses(this.blobForms[name].el);
+				_updateFormClasses.call(this, this.blobForms[name].el);
 			}
 
 			return true;
@@ -769,14 +628,14 @@
 			var name = _isForm(el);
 			if (
 				!name ||
-				typeof $scope[name] === 'undefined' ||
-				$scope[name].blobForms[name].$lock
+				!this.blobForms[name] ||
+				this.blobForms[name].$lock
 			) {
 				return false;
 			}
 
 			// Set a lock so this doesn't double-run.
-			Vue.set($scope[name].blobForms[name], '$lock', true);
+			Vue.set(this.blobForms[name], '$lock', true);
 
 			// Cast $touch to a boolean.
 			touch = !!touch;
@@ -784,24 +643,26 @@
 			// Before we start validating, let's reset the error holder
 			// to clear any arbitrary messages a user might have
 			// injected.
-			$scope[name].blobErrors[name] = {};
+			this.blobErrors[name] = {};
 
 			// Loop through and validate each field.
-			var fieldKeys = Object.keys($scope[name].blobFields[name]);
+			var fieldKeys = Object.keys(this.blobFields[name]);
 			for (i=0; i<fieldKeys.length; i++) {
-				_validateField(
+				_validateField.call(
+					this,
 					el,
-					$scope[name].blobFields[name][fieldKeys[i]].el,
+					this.blobFields[name][fieldKeys[i]].el,
 					touch
 				);
 			}
 
 			// Remove our lock.
-			Vue.set($scope[name].blobForms[name], '$lock', false);
+			Vue.set(this.blobForms[name], '$lock', false);
 
 			// Update form classes.
+			var vue = this;
 			Vue.nextTick(function() {
-				_updateFormClasses(el);
+				_updateFormClasses.call(vue, el);
 			});
 
 			return true;
@@ -818,10 +679,7 @@
 		function _validateField(form, field, touch) {
 			// Make sure the form is valid.
 			var name = _isForm(form);
-			if (
-				!name ||
-				typeof $scope[name] === 'undefined'
-			) {
+			if (!name || !this.blobFields[name]) {
 				return false;
 			}
 
@@ -834,11 +692,11 @@
 			// Vue might mess up event trigger ordering when forms are
 			// conditionally displayed. If the data doesn't exist yet
 			// we can go ahead and create it.
-			if (typeof $scope[name].blobFields[name][fieldName] === 'undefined') {
+			if (typeof this.blobFields[name][fieldName] === 'undefined') {
 				console.warn('Missing Field Data: ' + name + '.' + fieldName);
 
 				// Save the data.
-				Vue.set($scope[name].blobFields[name], fieldName, {
+				Vue.set(this.blobFields[name], fieldName, {
 					name: fieldName,
 					el: field,
 					originalValue: _checksum(field.value),
@@ -847,11 +705,11 @@
 					valid: true,
 					$lock: false,
 				});
-				$scope[name].$forceUpdate();
+				this.$forceUpdate();
 			}
 
 			// If this is locked, get out of here.
-			if ($scope[name].blobFields[name][fieldName].$lock) {
+			if (this.blobFields[name][fieldName].$lock) {
 				return false;
 			}
 
@@ -862,17 +720,17 @@
 				validity = false;
 
 			// Set a lock to pevent double-runs.
-			Vue.set($scope[name].blobFields[name][fieldName], '$lock', true);
+			Vue.set(this.blobFields[name][fieldName], '$lock', true);
 
 			// Mark it touched?
-			if (touch && !$scope[name].blobFields[name][fieldName].touched) {
-				Vue.set($scope[name].blobFields[name][fieldName], 'touched', true);
+			if (touch && !this.blobFields[name][fieldName].touched) {
+				Vue.set(this.blobFields[name][fieldName], 'touched', true);
 			}
 
 			// Mark it changed?
-			var changed = (_checksum(fieldValue) !== $scope[name].blobFields[name][fieldName].originalValue);
-			if (changed !== $scope[name].blobFields[name][fieldName].changed) {
-				Vue.set($scope[name].blobFields[name][fieldName], 'changed', changed);
+			var changed = (_checksum(fieldValue) !== this.blobFields[name][fieldName].originalValue);
+			if (changed !== this.blobFields[name][fieldName].changed) {
+				Vue.set(this.blobFields[name][fieldName], 'changed', changed);
 			}
 
 			// Start checking validity!
@@ -885,7 +743,7 @@
 			}
 			// Maybe empty/required? This shouldn't be counted as an
 			// in-your-face error unless the field has been touched.
-			else if (!$scope[name].blobFields[name][fieldName].touched) {
+			else if (!this.blobFields[name][fieldName].touched) {
 				validity = field.validity;
 				if (validity.valueMissing) {
 					valid = true;
@@ -894,7 +752,7 @@
 			}
 
 			// Email-specific validation.
-			if (fieldValue.length && valid && ('email' === field.getAttribute('type'))) {
+			if (fieldValue.length && valid && ('email' === field.type)) {
 				valid = !!regexEmail.test(fieldValue);
 				if (!valid) {
 					field.setCustomValidity('Please enter a complete email address.');
@@ -906,7 +764,7 @@
 				('blobPhone' in window) &&
 				fieldValue.length &&
 				valid &&
-				('tel' === field.getAttribute('type'))
+				('tel' === field.type)
 			) {
 				var lastValue = (field.dataset.blobPhoneValue) || '',
 					lastValid = parseInt(field.dataset.blobPhoneValid, 10) || 0;
@@ -942,11 +800,11 @@
 				// A custom callback can be specified by including a
 				// validation-callback attribute on the element.
 				var fieldCallback = field.dataset.validationCallback || field.getAttribute('validation-callback') || false;
-				if (fieldCallback && (typeof $scope[name][fieldCallback] === 'function')) {
-					var callbackResponse = $scope[name][fieldCallback](fieldValue);
+				if (fieldCallback && (typeof this[fieldCallback] === 'function')) {
+					var callbackResponse = this[fieldCallback](fieldValue);
 					if (callbackResponse !== true) {
 						valid = false;
-						if (typeof callbackResponse === 'string' && callbackResponse.length) {
+						if ((typeof callbackResponse === 'string') && callbackResponse.length) {
 							field.setCustomValidity(callbackResponse);
 						}
 						else {
@@ -960,68 +818,51 @@
 			if (valid) {
 				_resetValidity(field);
 
-				if ($scope[name].blobErrors[name][fieldName]) {
-					Vue.delete($scope[name].blobErrors[name], fieldName);
+				if (this.blobErrors[name][fieldName]) {
+					Vue.delete(this.blobErrors[name], fieldName);
 				}
 			}
 			// Otherwise record the error.
 			else {
-				Vue.set($scope[name].blobErrors[name], fieldName, field.validationMessage);
+				Vue.set(this.blobErrors[name], fieldName, field.validationMessage);
 			}
 
-			if (valid !== $scope[name].blobFields[name][fieldName].valid) {
-				Vue.set($scope[name].blobFields[name][fieldName], 'valid', valid);
+			if (valid !== this.blobFields[name][fieldName].valid) {
+				Vue.set(this.blobFields[name][fieldName], 'valid', valid);
 			}
 
 			// Update the field classes. These verbose conditions help
 			// prevent unnecessary DOM mutations, cutting back on
 			// overhead.
-			if ($scope[name].blobFields[name][fieldName].valid) {
-				if (field.classList.contains('is-invalid')) {
-					field.classList.remove('is-invalid');
-				}
-				if (!field.classList.contains('is-valid')) {
-					field.classList.add('is-valid');
-				}
-			}
-			else {
-				if (!field.classList.contains('is-invalid')) {
-					field.classList.add('is-invalid');
-				}
-				if (field.classList.contains('is-valid')) {
-					field.classList.remove('is-valid');
-				}
-			}
+			_toggleClasses(
+				field,
+				['is-valid', 'is:valid'],
+				['is-invalid', 'is:invalid'],
+				this.blobFields[name][fieldName].valid
+			);
 
-			if ($scope[name].blobFields[name][fieldName].touched) {
-				if (!field.classList.contains('is-touched')) {
-					field.classList.add('is-touched');
-				}
-			}
-			else {
-				if (field.classList.contains('is-touched')) {
-					field.classList.remove('is-touched');
-				}
-			}
+			_toggleClasses(
+				field,
+				['is-touched', 'is:touched'],
+				[],
+				this.blobFields[name][fieldName].touched
+			);
 
-			if ($scope[name].blobFields[name][fieldName].changed) {
-				if (!field.classList.contains('is-changed')) {
-					field.classList.add('is-changed');
-				}
-			}
-			else {
-				if (field.classList.contains('is-changed')) {
-					field.classList.remove('is-changed');
-				}
-			}
+			_toggleClasses(
+				field,
+				['is-changed', 'is:changed'],
+				[],
+				this.blobFields[name][fieldName].changed
+			);
 
 			// Remove the lock.
-			Vue.set($scope[name].blobFields[name][fieldName], '$lock', false);
+			Vue.set(this.blobFields[name][fieldName], '$lock', false);
 
 			// Update the form's classes?
-			if (!$scope[name].blobForms[name].$lock) {
+			if (!this.blobForms[name].$lock) {
+				var vue = this;
 				Vue.nextTick(function() {
-					_updateFormClasses(form);
+					_updateFormClasses.call(vue, form);
 				});
 			}
 
@@ -1065,17 +906,17 @@
 
 			// The form is its fields. Loop through each to see if a
 			// status deviates from the natural state.
-			var fields = Object.keys($scope[name].blobFields[name]);
+			var fields = Object.keys(this.blobFields[name]);
 			for (i=0; i<fields.length; i++) {
-				if (!changed && $scope[name].blobFields[name][fields[i]].changed) {
+				if (!changed && this.blobFields[name][fields[i]].changed) {
 					changed = true;
 				}
 
-				if (valid && !$scope[name].blobFields[name][fields[i]].valid) {
+				if (valid && !this.blobFields[name][fields[i]].valid) {
 					valid = false;
 				}
 
-				if (!touched && $scope[name].blobFields[name][fields[i]].touched) {
+				if (!touched && this.blobFields[name][fields[i]].touched) {
 					touched = true;
 				}
 
@@ -1086,61 +927,43 @@
 			}
 
 			// Update variables.
-			if (valid !== $scope[name].blobForms[name].valid) {
-				Vue.set($scope[name].blobForms[name], 'valid', valid);
+			if (valid !== this.blobForms[name].valid) {
+				Vue.set(this.blobForms[name], 'valid', valid);
 			}
-			if (changed !== $scope[name].blobForms[name].changed) {
-				Vue.set($scope[name].blobForms[name], 'changed', changed);
+			if (changed !== this.blobForms[name].changed) {
+				Vue.set(this.blobForms[name], 'changed', changed);
 			}
-			if (touched !== $scope[name].blobForms[name].touched) {
-				Vue.set($scope[name].blobForms[name], 'touched', touched);
+			if (touched !== this.blobForms[name].touched) {
+				Vue.set(this.blobForms[name], 'touched', touched);
 			}
 
 			// Update the form classes. These verbose conditions help
 			// prevent unnecessary DOM mutations, cutting back on
 			// overhead.
-			if (valid) {
-				if (el.classList.contains('is-invalid')) {
-					el.classList.remove('is-invalid');
-				}
-				if (!el.classList.contains('is-valid')) {
-					el.classList.add('is-valid');
-				}
-			}
-			else {
-				if (!el.classList.contains('is-invalid')) {
-					el.classList.add('is-invalid');
-				}
-				if (el.classList.contains('is-valid')) {
-					el.classList.remove('is-valid');
-				}
-			}
+			_toggleClasses(
+				el,
+				['is-valid', 'is:valid'],
+				['is-invalid', 'is:invalid'],
+				valid
+			);
 
-			if (touched) {
-				if (!el.classList.contains('is-touched')) {
-					el.classList.add('is-touched');
-				}
-			}
-			else {
-				if (el.classList.contains('is-touched')) {
-					el.classList.remove('is-touched');
-				}
-			}
+			_toggleClasses(
+				el,
+				['is-touched', 'is:touched'],
+				[],
+				touched
+			);
 
-			if (changed) {
-				if (!el.classList.contains('is-changed')) {
-					el.classList.add('is-changed');
-				}
-			}
-			else {
-				if (el.classList.contains('is-changed')) {
-					el.classList.remove('is-changed');
-				}
-			}
+			_toggleClasses(
+				el,
+				['is-changed', 'is:changed'],
+				[],
+				changed
+			);
 
 			// Force Vue to update as it doesn't tend to notice deep
 			// object changes right away.
-			$scope[name].$forceUpdate();
+			this.$forceUpdate();
 		}
 
 		// ------------------------------------------------------------- end validation
@@ -1160,12 +983,11 @@
 		 * @return string|bool Name or false.
 		 */
 		function _isForm(el) {
-			if (!el.nodeName || (el.nodeName !== 'FORM')) {
+			if (!el.nodeName || (el.nodeName !== 'FORM') || !el.name) {
 				return false;
 			}
 
-			var name = el.getAttribute('name') || '';
-			return name ? name : false;
+			return el.name;
 		}
 
 		/**
@@ -1184,13 +1006,17 @@
 					(el.nodeName !== 'INPUT') &&
 					(el.nodeName !== 'SELECT') &&
 					(el.nodeName !== 'TEXTAREA')
-				)
+				) ||
+				el.disabled ||
+				!el.name ||
+				(el.type === 'button') ||
+				(el.type === 'submit') ||
+				(el.type === 'reset')
 			) {
 				return false;
 			}
 
-			var name = el.getAttribute('name') || '';
-			return name ? name : false;
+			return el.name;
 		}
 
 		/**
@@ -1207,18 +1033,11 @@
 				return false;
 			}
 
-			// Pull fields by searching DOM.
-			var fields = el.querySelectorAll('input[name], select[name], textarea[name]');
-			if (!fields) {
-				return false;
-			}
-
 			// Add any fields with a name to our list.
 			var out = [];
-			for (var i=0; i<fields.length; i++) {
-				var name = fields[i].getAttribute('name') || '';
-				if (name) {
-					out.push(fields[i]);
+			for (var i=0; i<el.elements.length; i++) {
+				if (_isField(el.elements[i])) {
+					out.push(el.elements[i]);
 				}
 			}
 
@@ -1235,9 +1054,10 @@
 		 * Extraneous data, from e.g. removed nodes, will be cleaned.
 		 *
 		 * @param DOMElement $el Form.
+		 * @param bool $updateClasses Update classes when done.
 		 * @return bool True/false.
 		 */
-		function _loadFields(el) {
+		function _loadFields(el, updateClasses) {
 			// Make sure the form is valid.
 			var name = _isForm(el);
 			if (false === name) {
@@ -1247,7 +1067,9 @@
 			// Pull the fields.
 			var fields = _getFields(el);
 			if (false === fields) {
-				Vue.set($scope[name].blobForms[name], 'fields', {});
+				Vue.set(this.blobForms[name], 'fields', {});
+				Vue.set(this.blobFields, 'name', {});
+				Vue.set(this.blobErrors, 'name', {});
 				return false;
 			}
 
@@ -1255,12 +1077,12 @@
 
 			// Make sure each field is represented.
 			var fieldNames = [],
-				fieldKeys = Object.keys($scope[name].blobFields[name]),
-				errorKeys = Object.keys($scope[name].blobFields[name]);
+				fieldKeys = Object.keys(this.blobFields[name]),
+				errorKeys = Object.keys(this.blobFields[name]);
 
 			for (i=0; i<fields.length; i++) {
 				// Verify the field we found has a valid name.
-				var fieldName = fields[i].getAttribute('name') || '';
+				var fieldName = fields[i].name;
 				if (!fieldName) {
 					continue;
 				}
@@ -1271,7 +1093,7 @@
 					fieldKeys.push(fieldName);
 
 					// Push the data.
-					Vue.set($scope[name].blobFields[name], fieldName, {
+					Vue.set(this.blobFields[name], fieldName, {
 						name: fieldName,
 						el: fields[i],
 						originalValue: _checksum(fields[i].value || ''),
@@ -1284,41 +1106,40 @@
 					// Bind an input listener to monitor blur, AKA what
 					// we're calling "touched".
 					/* jshint ignore:start */
+					var vue = this;
 					fields[i].addEventListener('blur', function (e) {
 						Vue.nextTick(function() {
-							_validateField(el, e.target, true);
+							_validateField.call(vue, el, e.target, true);
 						});
 					});
 					/* jshint ignore:end */
-
-					// And add to our running list.
-					fieldNames.push(fieldName);
 				}
+
+				// And add to our running list.
+				fieldNames.push(fieldName);
 			}
 
 			// Remove any outmoded data.
-			if (fieldKeys.length !== fieldNames.length) {
-				for (i=0; i<fieldKeys.length; i++) {
-					// Remove field.
-					if (fieldNames.indexOf(fieldKeys[i]) === -1) {
-						changed = true;
+			for (i=0; i<fieldKeys.length; i++) {
+				// Remove field.
+				if (fieldNames.indexOf(fieldKeys[i]) === -1) {
+					changed = true;
 
-						// Unbind any events.
-						try {
-							var fieldEvents = getEventListeners($scope[name].blobFields[name].el);
-							for (j=0; j<fieldEvents.length; j++) {
-								fieldEvents[j].remove();
-							}
-						} catch (Ex) {}
-
-						// Remove the field data.
-						Vue.delete($scope[name].blobFields[name], fieldKeys[i]);
-
-						// Remove error.
-						if (errorKeys.indexOf(fieldKeys[i]) === -1) {
-							changed = true;
-							Vue.delete($scope[name].blobFields[name], fieldKeys[i]);
+					// Unbind any events.
+					try {
+						var fieldEvents = getEventListeners(this.blobFields[name].el);
+						for (j=0; j<fieldEvents.length; j++) {
+							fieldEvents[j].remove();
 						}
+					} catch (Ex) {}
+
+					// Remove the field data.
+					Vue.delete(this.blobFields[name], fieldKeys[i]);
+
+					// Remove error.
+					if (errorKeys.indexOf(fieldKeys[i]) === -1) {
+						changed = true;
+						Vue.delete(this.blobFields[name], fieldKeys[i]);
 					}
 				}
 			}
@@ -1326,7 +1147,89 @@
 			// Force Vue to update as it doesn't tend to notice deep
 			// object changes right away.
 			if (changed) {
-				$scope[name].$forceUpdate();
+				this.$forceUpdate();
+				if (!!updateClasses) {
+					var vue = this;
+					Vue.nextTick(function(){
+						_updateFormClasses.call(vue, el);
+					});
+				}
+			}
+
+			return true;
+		}
+
+		/**
+		 * Toggle Element Classes
+		 *
+		 * If the condition passes, add the good and remove the bad
+		 * classes. Otherwise, do the reverse.
+		 *
+		 * @param DOMElement $el Element.
+		 * @param mixed $good Good classes.
+		 * @param mixed $bad Bad classes.
+		 * @param bool $test Condition.
+		 * @return bool True/false.
+		 */
+		function _toggleClasses(el, good, bad, test) {
+			if (!el.name) {
+				return false;
+			}
+
+			// We want an array of good classes.
+			if (typeof good === 'string') {
+				good = good.split(' ');
+			}
+			if (!Array.isArray(good)) {
+				return false;
+			}
+
+			// We want an array of bad classes.
+			if (typeof bad === 'string') {
+				bad = bad.split(' ');
+			}
+			if (!Array.isArray(bad)) {
+				return false;
+			}
+
+			test = !!test;
+			var i,
+				hasClass;
+
+			// Loop through the good.
+			for (i=0; i<good.length; i++) {
+				if (!good[i]) {
+					continue;
+				}
+
+				hasClass = el.classList.contains(good[i]);
+
+				// Add it.
+				if (test && !hasClass) {
+					el.classList.add(good[i]);
+				}
+				// Remove it.
+				else if (!test && hasClass) {
+					el.classList.remove(good[i]);
+				}
+			}
+
+			// Loop through the bad.
+			for (i=0; i<bad.length; i++) {
+				if (!bad[i]) {
+					continue;
+				}
+
+				hasClass = el.classList.contains(bad[i]);
+
+				// Add it.
+				if (!test && !hasClass) {
+					el.classList.add(bad[i]);
+				}
+				// Remove it.
+				else if (test && hasClass) {
+					el.classList.remove(bad[i]);
+				}
 			}
 
 			return true;
@@ -1606,7 +1509,7 @@
 		function _getModelName(vnode) {
 			try {
 				return vnode.data.directives.find(function(o) {
-					return o.name === 'model';
+					return (o.name === 'model');
 				}).expression;
 			} catch (Ex) {
 				return false;
