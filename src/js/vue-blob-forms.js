@@ -1509,7 +1509,7 @@
 		function _getModelName(vnode) {
 			try {
 				return vnode.data.directives.find(function(o) {
-					return (o.getAttribute('name') === 'model');
+					return (o.name === 'model');
 				}).expression;
 			} catch (Ex) {
 				return false;
