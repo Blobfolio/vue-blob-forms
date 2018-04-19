@@ -3,7 +3,7 @@
  *
  * This is a Vue plugin for providing form validation.
  *
- * @version 0.2.0
+ * @version 0.2.1
  * @author Blobfolio, LLC <hello@blobfolio.com>
  * @package vue-blob-forms
  * @license WTFPL <http://www.wtfpl.net>
@@ -386,6 +386,51 @@
 
 			// Return all errors.
 			return errors;
+		};
+
+		/**
+		 * Unattached Form Errors
+		 *
+		 * Return any form errors whose keys do not directly correspond
+		 * to a field name.
+		 *
+		 * @param string Form name.
+		 * @return mixed Errors or false.
+		 */
+		Vue.prototype.formOtherErrors = function(name) {
+			// Make sure the form is valid.
+			if (!name || (typeof this.blobForms[name] === 'undefined')) {
+				return false;
+			}
+
+			var errors = this.blobErrors[name] || {},
+				errorKeys = Object.keys(errors);
+
+			// We have no errors.
+			if (!errorKeys.length) {
+				return false;
+			}
+
+			var fields = _getFields(this.blobForms[name].el),
+				fieldKeys = [],
+				i;
+			for (i=0; i<fields.length; i++) {
+				var fieldName = fields[i].getAttribute('name') || '';
+				if (fieldName) {
+					fieldKeys.push(fieldName);
+				}
+			}
+
+			var out = {};
+			var found = false;
+			for (i = 0; i < errorKeys.length; i++) {
+				if (fieldKeys.indexOf(errorKeys[i]) === -1) {
+					out[errorKeys[i]] = errors[errorKeys[i]];
+					found = true;
+				}
+			}
+
+			return found ? out : false;
 		};
 
 		/**

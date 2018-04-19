@@ -47,7 +47,11 @@ var app = new Vue({
 			}
 
 			return 'A valid Beatles movie title is required.';
-		}
+		},
+		// Arbitrary error.
+		otherError: function() {
+			this.setFormErrors('demo', {miscError: 'This is a random non-field error.'});
+		},
 	},
 });
 

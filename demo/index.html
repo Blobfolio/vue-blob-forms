@@ -317,6 +317,16 @@
 							</div>
 						</td>
 					</tr>
+					<tr v-if="false !== formOtherErrors('demo')">
+						<th scope="row">Non-Field Errors</th>
+						<td colspan="4"></td>
+						<td>
+							<div class="error-message" v-for="(error, field) in formOtherErrors('demo')">
+								<strong>{{ field }}:</strong><br>
+								{{ error }}
+							</div>
+						</td>
+					</tr>
 				</tfoot>
 			</table>
 		</form>
@@ -324,6 +334,7 @@
 		<div class="demo--actions">
 			<button v-on:click.prevent="validateForm('demo')" class="fg-white bg-pink bg-purple-hover">Check All</button>
 			<button v-on:click.prevent="showingToggle = !showingToggle" class="fg-white bg-blue bg-purple-hover">Toggle Field</button>
+			<button v-on:click.prevent="otherError" class="fg-white bg-blue bg-purple-hover">Non-field Error</button>
 		</div>
 	</div><!--#vue-app-->
 

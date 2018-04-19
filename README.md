@@ -46,6 +46,7 @@ Name attributes are required for all forms and form fields. Any element without 
 </form>
 ```
 
+
 ### Method: formErrors()
 
 This method can be used to retrieve all errors for a given form, or an error for a single form field.
@@ -66,8 +67,31 @@ When `fieldName` is passed, the method will return the error corresponding to th
 #### Example
 
 ```html
-<div v-if="formErrors('myForm', 'myField')" class="error">
+<div v-if="false !== formErrors('myForm', 'myField')" class="error">
     {{ formErrors('myForm', 'myField') }}
+</div>
+```
+
+
+### Method: formOtherErrors()
+
+This method returns any errors *not* corresponding to field names, or `FALSE` if there are none.
+
+#### Arguments
+
+| Type | Name | Description |
+| ---- | ---- | ----------- |
+| *string* | formName | The name of the form. |
+
+#### Returns
+
+This method returns any errors *not* corresponding to field names, or `FALSE` if there are none.
+
+#### Example
+
+```html
+<div v-if="false !== formOtherErrors('myForm')" v-for="(error, key) in formOtherErrors('myForm')" class="error">
+    {{ key }}: {{ error }}
 </div>
 ```
 
@@ -97,6 +121,7 @@ var errors = {
 this.setFormErrors('myForm', errors);
 ```
 
+
 ### Method: formTouched()
 
 This method can be used to determine whether or not a form or a specific field has been "touched".
@@ -122,15 +147,18 @@ When `fieldName` is passed, `TRUE` or `FALSE` are returned based on the state of
 <input type="text" v-bind:class="{ touched: formTouched('myForm', 'myField') }" name="myField" />
 ```
 
+
 ### Method: formChanged()
 
 This method works just like [formTouched()](#method-formtouched), but says whether or not field values have changed since the form was first initialized.
+
 
 ### Method: formValid()
 
 This method works just like [formTouched()](#method-formtouched), but says whether or not field values are valid.
 
 Note: during automatic validation, if a field is required _and_ empty, it will only trigger an invalid state _if_ it has been touched. Because of this, it is recommended you call the [validateForm()](#method-validateform) method prior to submission, which will force-touch all fields and rerun validation accordingly.
+
 
 ### Method: validateForm()
 
@@ -165,6 +193,7 @@ submitForm = function() {
     // Submit the form...
 }
 ```
+
 
 ### Custom Validation Callbacks
 
