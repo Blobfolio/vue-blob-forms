@@ -61,7 +61,6 @@ module.exports = function(grunt) {
 				files: {
 					'dist/vue-blob-forms.min.js': ['src/js/vue-blob-forms.js'],
 					'demo/assets/demo.min.js': ['src/js/demo.js'],
-					'demo/assets/vue-blob-forms.min.js': ['src/js/vue-blob-forms.js'],
 				}
 			}
 		},
