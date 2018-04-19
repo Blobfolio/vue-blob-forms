@@ -11,18 +11,27 @@
  * @see https://blobfolio.com
  * @see https://github.com/Blobfolio/vue-blob-forms
  */
-(function () {
+
+/* global blobPhone */
+/* global getEventListeners */
+/* global Vue */
+(function() {
 
 	// The plugin!
 	var BlobFormsVue = {};
-	BlobFormsVue.install = function (Vue, options) {
+	BlobFormsVue.install = function(Vue) {
 
 		// -------------------------------------------------------------
 		// Setup
 		// -------------------------------------------------------------
 
 		// Improved validation patterns.
+		/* eslint-disable */
 		var regexEmail = new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
+		/* eslint-enable */
+
+		// Gravatar base URL.
+		const gravatar = 'https://www.gravatar.com/avatar/';
 
 		// This will hold our form states.
 		Vue.prototype.blobForms = {};
@@ -48,10 +57,10 @@
 			/**
 			 * Element with this directive has fully landed in the DOM.
 			 *
-			 * @param DOMElement $el Element.
-			 * @param object $binding Vue data.
-			 * @param object $vnode Vue node.
-			 * @return void Nothing.
+			 * @param {DOMElement} el Element.
+			 * @param {object} binding Vue data.
+			 * @param {object} vnode Vue node.
+			 * @returns {void} Nothing.
 			 */
 			inserted: function(el, binding, vnode) {
 				var name = _isForm(el);
@@ -75,10 +84,10 @@
 				});
 
 				// Make sure the field and errors tables have entries.
-				if (typeof vnode.context.blobFields[name] === 'undefined') {
+				if ('undefined' === typeof vnode.context.blobFields[name]) {
 					Vue.set(vnode.context.blobFields, name, {});
 				}
-				if (typeof vnode.context.blobErrors[name] === 'undefined') {
+				if ('undefined' === typeof vnode.context.blobErrors[name]) {
 					Vue.set(vnode.context.blobErrors, name, {});
 				}
 
@@ -90,8 +99,8 @@
 				// a duplicate of _loadFields(), but Vue has trouble
 				// setting data correctly when this particular piece is
 				// passed to another function.
-				var observer = new MutationObserver(_debounce(function(mutations, instance) {
-					Vue.nextTick(function(){
+				var observer = new MutationObserver(_debounce(function() {
+					Vue.nextTick(function() {
 						_loadFields.call(vnode.context, el, true);
 					});
 				}, 50));
@@ -99,9 +108,9 @@
 
 				// Bind an input listener to monitor changes, but only
 				// act if we have an INPUT or TEXTAREA field.
-				el.addEventListener('input', _debounce(function (e) {
+				el.addEventListener('input', _debounce(function(e) {
 					Vue.nextTick(function() {
-						if ((e.target.tagName !== 'SELECT') && (false !== _isField(e.target))) {
+						if (('SELECT' !== e.target.tagName) && (false !== _isField(e.target))) {
 							_validateField.call(vnode.context, el, e.target, true);
 						}
 					});
@@ -109,12 +118,12 @@
 
 				// For SELECT fields, we'll use a change listener
 				// instead. This fixes a bug with Vue + Chrome.
-				el.addEventListener('change', _debounce(function (e) {
+				el.addEventListener('change', _debounce(function(e) {
 					Vue.nextTick(function() {
-						if ((e.target.tagName === 'SELECT') && (false !== _isField(e.target))) {
+						if (('SELECT' === e.target.tagName) && (false !== _isField(e.target))) {
 							// The timeout fixes another SELECT bug,
 							// this one affecting Edge. Haha.
-							setTimeout(function(){
+							setTimeout(function() {
 								_validateField.call(vnode.context, el, e.target, true);
 							}, 50);
 						}
@@ -122,7 +131,7 @@
 				}, 100));
 
 				// Let's assume we have no fields yet and load our data.
-				Vue.nextTick(function(){
+				Vue.nextTick(function() {
 					_loadFields.call(vnode.context, el);
 					Vue.nextTick(function() {
 						_validateForm.call(vnode.context, el);
@@ -135,31 +144,37 @@
 		});
 
 		/**
-		 * v-gravatar
+		 * V-gravatar
 		 *
 		 * Find the Gravatar icon associated with an email address.
 		 *
-		 * @param int $size Icon size.
+		 * @param {int} size Icon size.
 		 */
 		Vue.directive('gravatar', {
 			id: 'gravatar',
 			priority: 50000,
-			inserted: function(el, binding, vnode) {
+			/**
+			 * Element with this directive has fully landed in the DOM.
+			 *
+			 * @param {DOMElement} el Element.
+			 * @param {object} binding Vue data.
+			 * @returns {void} Nothing.
+			 */
+			inserted: function(el, binding) {
 				// This must be an email field.
 				if (
 					el.nodeName &&
-					(el.nodeName === 'INPUT') &&
-					(el.getAttribute('type') === 'email')
+					('INPUT' === el.nodeName) &&
+					('email' === el.getAttribute('type'))
 				) {
-					var size = parseInt(binding.value, 10) || 0,
-						gravatar = 'https://www.gravatar.com/avatar/';
+					var size = parseInt(binding.value, 10) || 0;
 
 					// Make sure the size makes sense.
-					if (size <= 0) {
+					if (0 >= size) {
 						size = 80;
 					}
 
-					var updateEmail = _debounce(function(){
+					var updateEmail = _debounce(function() {
 						// Make sure the field value makes sense.
 						var email = (el.value || '').trim().toLowerCase(),
 							hash = '334c4a4c42fdb79d7ebc3e73b517e6f8',
@@ -180,51 +195,59 @@
 
 					// Bind a listener so we can update the image as the
 					// user types.
-					Vue.nextTick(function(){
+					Vue.nextTick(function() {
 						el.addEventListener('input', updateEmail);
 						updateEmail();
 					});
 				}
-			}
+			},
 		});
 
 		/**
-		 * v-phone
+		 * V-phone
 		 *
 		 * Extended handling for telephone numbers. This requires the
 		 * blob-phone.js library.
 		 *
 		 * @see https://github.com/Blobfolio/blob-phone
 		 *
-		 * @param string $country Country code.
+		 * @param {string} country Country code.
 		 */
 		Vue.directive('phone', {
 			id: 'phone',
 			priority: 50000,
-			inserted: function(el, binding, vnode){
+			/**
+			 * Element with this directive has fully landed in the DOM.
+			 *
+			 * @param {DOMElement} el Element.
+			 * @param {object} binding Vue data.
+			 * @param {object} vnode Vue node.
+			 * @returns {void} Nothing.
+			 */
+			inserted: function(el, binding, vnode) {
 				// This must be a telephone field.
 				if (
 					!el.nodeName ||
-					(el.nodeName !== 'INPUT') ||
-					(el.getAttribute('type') !== 'tel')
+					('INPUT' !== el.nodeName) ||
+					('tel' !== el.getAttribute('type'))
 				) {
 					return;
 				}
 
 				// The blob-phone library must be loaded.
 				if (!('blobPhone' in window)) {
-					console.warn('v-phone requires the blob-phone Javascript library.' + "\n" + 'https://github.com/Blobfolio/blob-phone#javascript');
+					console.warn('v-phone requires the blob-phone Javascript library.\nhttps://github.com/Blobfolio/blob-phone#javascript');
 					return;
 				}
 
 				// Sort out the default country.
 				var defaultCountry = (binding.value || '').toUpperCase() || 'US';
-				if (defaultCountry.length !== 2) {
+				if (2 !== defaultCountry.length) {
 					defaultCountry = 'US';
 				}
 
 				// Our update handler.
-				var updatePhone = _debounce(function(){
+				var updatePhone = _debounce(function() {
 					// Make sure the field value makes sense.
 					var value = (el.value || '').trim(),
 						valueNew = '',
@@ -256,12 +279,12 @@
 							// We have to figure out what the model is,
 							// and break it down into something Vue can
 							// process.
-							/* jshint ignore:start */
 							var model = _getModelName(vnode);
 							model = ('vnode.context.' + model).split('.');
 							var modelTop = model.pop();
+							/* eslint-disable */
 							model = eval(model.join('.'));
-							/* jshint ignore:end */
+							/* eslint-enable */
 
 							// Update the model.
 							Vue.set(model, modelTop, valueNew);
@@ -304,39 +327,47 @@
 						updatePhone();
 					});
 				});
-			}
+			},
 		});
 
 		/**
-		 * v-blobselect
+		 * V-blobselect
 		 *
 		 * Wrapper for blob-select.
 		 *
 		 * @see https://github.com/Blobfolio/blob-phone
 		 *
-		 * @param string $country Country code.
+		 * @param {string} country Country code.
 		 */
 		Vue.directive('blobselect', {
 			id: 'blobselect',
 			priority: 50000,
-			inserted: function(el, binding){
+			/**
+			 * Element with this directive has fully landed in the DOM.
+			 *
+			 * @param {DOMElement} el Element.
+			 * @param {object} binding Vue data.
+			 * @param {object} vnode Vue node.
+			 * @returns {void} Nothing.
+			 */
+			inserted: function(el, binding) {
 				// This must be a select field.
 				if (
 					!el.nodeName ||
-					(el.nodeName !== 'SELECT')
+					('SELECT' !== el.nodeName)
 				) {
 					return;
 				}
 
 				// The blob-phone library must be loaded.
 				if (!('blobSelect' in HTMLSelectElement.prototype)) {
-					console.warn('v-blobselect requires the blob-select Javascript library.' + "\n" + 'https://github.com/Blobfolio/blob-select');
+					console.warn('v-blobselect requires the blob-select Javascript library.\nhttps://github.com/Blobfolio/blob-select');
 					return;
 				}
 
 				// Figure out the arguments.
 				var args = binding.value || null;
-				if (typeof args !== 'object') {
+				if ('object' !== typeof args) {
 					args = null;
 				}
 
@@ -357,13 +388,13 @@
 		/**
 		 * Form/Field Errors
 		 *
-		 * @param string Form name.
-		 * @param string Field name.
-		 * @return mixed Errors or false.
+		 * @param {string} name Form name.
+		 * @param {string} fieldName Field name.
+		 * @returns {mixed} Errors or false.
 		 */
 		Vue.prototype.formErrors = function(name, fieldName) {
 			// Make sure the form is valid.
-			if (!name || (typeof this.blobForms[name] === 'undefined')) {
+			if (!name || ('undefined' === typeof this.blobForms[name])) {
 				return false;
 			}
 
@@ -377,7 +408,7 @@
 
 			// Looking for a specific field's error?
 			if (fieldName) {
-				if (errorKeys.indexOf(fieldName) === -1) {
+				if (-1 === errorKeys.indexOf(fieldName)) {
 					return false;
 				}
 
@@ -394,12 +425,12 @@
 		 * Return any form errors whose keys do not directly correspond
 		 * to a field name.
 		 *
-		 * @param string Form name.
-		 * @return mixed Errors or false.
+		 * @param {string} name Form name.
+		 * @returns {mixed} Errors or false.
 		 */
 		Vue.prototype.formOtherErrors = function(name) {
 			// Make sure the form is valid.
-			if (!name || (typeof this.blobForms[name] === 'undefined')) {
+			if (!name || ('undefined' === typeof this.blobForms[name])) {
 				return false;
 			}
 
@@ -414,7 +445,7 @@
 			var fields = _getFields(this.blobForms[name].el),
 				fieldKeys = [],
 				i;
-			for (i=0; i<fields.length; i++) {
+			for (i = 0; i < fields.length; i++) {
 				var fieldName = fields[i].getAttribute('name') || '';
 				if (fieldName) {
 					fieldKeys.push(fieldName);
@@ -424,7 +455,7 @@
 			var out = {};
 			var found = false;
 			for (i = 0; i < errorKeys.length; i++) {
-				if (fieldKeys.indexOf(errorKeys[i]) === -1) {
+				if (-1 === fieldKeys.indexOf(errorKeys[i])) {
 					out[errorKeys[i]] = errors[errorKeys[i]];
 					found = true;
 				}
@@ -436,13 +467,13 @@
 		/**
 		 * Form/Field Touched
 		 *
-		 * @param string Form name.
-		 * @param string Field name.
-		 * @return bool True/false.
+		 * @param {string} name Form name.
+		 * @param {string} fieldName Field name.
+		 * @returns {bool} True/false.
 		 */
 		Vue.prototype.formTouched = function(name, fieldName) {
 			// Make sure the form is valid.
-			if (!name || (typeof this.blobForms[name] === 'undefined')) {
+			if (!name || ('undefined' === typeof this.blobForms[name])) {
 				return false;
 			}
 
@@ -458,13 +489,13 @@
 		/**
 		 * Form/Field Changed
 		 *
-		 * @param string Form name.
-		 * @param string Field name.
-		 * @return bool True/false.
+		 * @param {string} name Form name.
+		 * @param {string} fieldName Field name.
+		 * @returns {bool} True/false.
 		 */
 		Vue.prototype.formChanged = function(name, fieldName) {
 			// Make sure the form is valid.
-			if (!name || (typeof this.blobForms[name] === 'undefined')) {
+			if (!name || ('undefined' === typeof this.blobForms[name])) {
 				return false;
 			}
 
@@ -480,13 +511,13 @@
 		/**
 		 * Form/Field Valid
 		 *
-		 * @param string Form name.
-		 * @param string Field name.
-		 * @return bool True/false.
+		 * @param {string} name Form name.
+		 * @param {string} fieldName Field name.
+		 * @returns {bool} True/false.
 		 */
 		Vue.prototype.formValid = function(name, fieldName) {
 			// Make sure the form is valid.
-			if (!name || (typeof this.blobForms[name] === 'undefined')) {
+			if (!name || ('undefined' === typeof this.blobForms[name])) {
 				return false;
 			}
 
@@ -502,12 +533,12 @@
 		/**
 		 * Validate Form
 		 *
-		 * @param string $name Form name.
-		 * @return bool|object True or errors.
+		 * @param {string} name Form name.
+		 * @returns {bool|object} True or errors.
 		 */
 		Vue.prototype.validateForm = function(name) {
 			// Make sure the form is valid.
-			if (!name || (typeof this.blobForms[name] === 'undefined')) {
+			if (!name || ('undefined' === typeof this.blobForms[name])) {
 				return { other: 'Invalid form.' };
 			}
 
@@ -528,20 +559,20 @@
 		 * have to correspond to fields, but they must correspond to
 		 * a v-form.
 		 *
-		 * @param string $name Form name.
-		 * @param object $errors Errors.
-		 * @return bool True/false.
+		 * @param {string} name Form name.
+		 * @param {object} errors Errors.
+		 * @returns {bool} True/false.
 		 */
 		Vue.prototype.setFormErrors = function(name, errors) {
 			// Make sure the form is valid.
-			if (!name || (typeof this.blobErrors[name] === 'undefined')) {
+			if (!name || ('undefined' === typeof this.blobErrors[name])) {
 				return false;
 			}
 
 			// This should be a keyed object.
 			if (
-				(typeof errors !== 'object') ||
-				(errors === null) ||
+				('object' !== typeof errors) ||
+				(null === errors) ||
 				Array.isArray(errors)
 			) {
 				return false;
@@ -557,12 +588,12 @@
 			}
 
 			// Loop through everything!
-			for (i=0; i<keys.length; i++) {
+			for (let i = 0; i < keys.length; i++) {
 				var key = keys[i],
 					value = errors[keys[i]];
 
 				// Bad error?
-				if (!value || (typeof value !== 'string')) {
+				if (!value || ('string' !== typeof value)) {
 					continue;
 				}
 
@@ -573,7 +604,7 @@
 
 				// If this is a field, we should also update its
 				// validity details.
-				if (fields.indexOf(key) !== -1) {
+				if (-1 !== fields.indexOf(key)) {
 					// Update internal meta.
 					if (this.blobFields[name][key].valid) {
 						Vue.set(this.blobFields[name][key], 'valid', false);
@@ -604,16 +635,16 @@
 		 *
 		 * Get a gravatar URL given an email address.
 		 *
-		 * @param string $email Email.
-		 * @param int $size Size.
-		 * @return string URL.
+		 * @param {string} email Email.
+		 * @param {int} size Size.
+		 * @returns {string} URL.
 		 */
 		Vue.prototype.gravatarURL = function(email, size) {
 			// Make sure the data makes sense.
 			email = email ? email + '' : '';
 			email = email.trim().toLowerCase();
 			size = parseInt(size, 10) || 0;
-			if (size <= 0) {
+			if (0 >= size) {
 				size = 80;
 			}
 
@@ -628,18 +659,18 @@
 			return gravatar + hash + '?s=' + size + '&d=blank';
 		};
 
-		/**
-		 * Format A Phone Number
-		 *
-		 * @param string $phone Phone.
-		 * @param string $country Country.
-		 * @return string Phone number.
-		 */
 		Vue.mixin({
 			filters: {
+				/**
+				 * Format A Phone Number
+				 *
+				 * @param {string} phone Phone.
+				 * @param {string} country Country.
+				 * @returns {string} Phone number.
+				 */
 				phone: function(phone, country) {
 					if (!('blobPhone' in window)) {
-						console.warn('This filter requires the blob-phone Javascript library.' + "\n" + 'https://github.com/Blobfolio/blob-phone#javascript');
+						console.warn('This filter requires the blob-phone Javascript library.\nhttps://github.com/Blobfolio/blob-phone#javascript');
 						return phone;
 					}
 
@@ -649,7 +680,7 @@
 					}
 
 					return phone;
-				}
+				},
 			},
 		});
 
@@ -664,9 +695,9 @@
 		/**
 		 * Validate Form
 		 *
-		 * @param DOMElement $el Form.
-		 * @param bool $touch Force touch.
-		 * @return bool True/false.
+		 * @param {DOMElement} el Form.
+		 * @param {bool} touch Force touch.
+		 * @returns {bool} True/false.
 		 */
 		function _validateForm(el, touch) {
 			// Make sure the form is valid.
@@ -692,7 +723,7 @@
 
 			// Loop through and validate each field.
 			var fieldKeys = Object.keys(this.blobFields[name]);
-			for (i=0; i<fieldKeys.length; i++) {
+			for (let i = 0; i < fieldKeys.length; i++) {
 				_validateField.call(
 					this,
 					el,
@@ -716,10 +747,10 @@
 		/**
 		 * Validate Field
 		 *
-		 * @param DOMElement $form Form.
-		 * @param DOMElement $field Field.
-		 * @param bool $touch Force touch.
-		 * @return bool True/false.
+		 * @param {DOMElement} form Form.
+		 * @param {DOMElement} field Field.
+		 * @param {bool} touch Force touch.
+		 * @returns {bool} True/false.
 		 */
 		function _validateField(form, field, touch) {
 			// Make sure the form is valid.
@@ -737,7 +768,7 @@
 			// Vue might mess up event trigger ordering when forms are
 			// conditionally displayed. If the data doesn't exist yet
 			// we can go ahead and create it.
-			if (typeof this.blobFields[name][fieldName] === 'undefined') {
+			if ('undefined' === typeof this.blobFields[name][fieldName]) {
 				console.warn('Missing Field Data: ' + name + '.' + fieldName);
 
 				// Save the data.
@@ -783,7 +814,7 @@
 			_resetValidity(field);
 
 			// Either good or maybe the browser doesn't support the API.
-			if ((typeof field.willValidate === 'undefined') || field.checkValidity()) {
+			if (('undefined' === typeof field.willValidate) || field.checkValidity()) {
 				valid = true;
 			}
 			// Maybe empty/required? This shouldn't be counted as an
@@ -817,7 +848,7 @@
 				// We need to reparse.
 				if (lastValue !== fieldValue) {
 					var country = (field.dataset.country || '').toUpperCase() || 'US';
-					if (country.length !== 2) {
+					if (2 !== country.length) {
 						country = 'US';
 					}
 
@@ -832,7 +863,7 @@
 					}
 				}
 				else {
-					valid = (lastValid === 1);
+					valid = (1 === lastValid);
 				}
 
 				if (!valid) {
@@ -845,11 +876,11 @@
 				// A custom callback can be specified by including a
 				// validation-callback attribute on the element.
 				var fieldCallback = field.dataset.validationCallback || field.getAttribute('validation-callback') || false;
-				if (fieldCallback && (typeof this[fieldCallback] === 'function')) {
+				if (fieldCallback && ('function' === typeof this[fieldCallback])) {
 					var callbackResponse = this[fieldCallback](fieldValue);
-					if (callbackResponse !== true) {
+					if (true !== callbackResponse) {
 						valid = false;
-						if ((typeof callbackResponse === 'string') && callbackResponse.length) {
+						if (('string' === typeof callbackResponse) && callbackResponse.length) {
 							field.setCustomValidity(callbackResponse);
 						}
 						else {
@@ -921,8 +952,8 @@
 		 * to prevent errors in old browsers, so it is better to offload
 		 * to its own function.
 		 *
-		 * @param DOMElement $el Field.
-		 * @return bool True/false.
+		 * @param {DOMElement} el Field.
+		 * @returns {bool} True/false.
 		 */
 		function _resetValidity(el) {
 			try {
@@ -936,8 +967,8 @@
 		/**
 		 * Update Form Classes
 		 *
-		 * @param DOMElement $el Field.
-		 * @return bool True/false.
+		 * @param {DOMElement} el Field.
+		 * @returns {bool} True/false.
 		 */
 		function _updateFormClasses(el) {
 			var name = _isForm(el);
@@ -952,7 +983,7 @@
 			// The form is its fields. Loop through each to see if a
 			// status deviates from the natural state.
 			var fields = Object.keys(this.blobFields[name]);
-			for (i=0; i<fields.length; i++) {
+			for (let i = 0; i < fields.length; i++) {
 				if (!changed && this.blobFields[name][fields[i]].changed) {
 					changed = true;
 				}
@@ -1024,11 +1055,11 @@
 		 *
 		 * Make sure an element is in fact a form and return its name.
 		 *
-		 * @param DOMElement $el Element.
-		 * @return string|bool Name or false.
+		 * @param {DOMElement} el Element.
+		 * @returns {string|bool} Name or false.
 		 */
 		function _isForm(el) {
-			if (!el.nodeName || (el.nodeName !== 'FORM') || !el.getAttribute('name')) {
+			if (!el.nodeName || ('FORM' !== el.nodeName) || !el.getAttribute('name')) {
 				return false;
 			}
 
@@ -1041,22 +1072,22 @@
 		 * Make sure an element is an INPUT, SELECT, or TEXTAREA and
 		 * return its name.
 		 *
-		 * @param DOMElement $el Element.
-		 * @return string|bool Name or false.
+		 * @param {DOMElement} el Element.
+		 * @returns {string|bool} Name or false.
 		 */
 		function _isField(el) {
 			if (
 				!el.nodeName ||
 				(
-					(el.nodeName !== 'INPUT') &&
-					(el.nodeName !== 'SELECT') &&
-					(el.nodeName !== 'TEXTAREA')
+					('INPUT' !== el.nodeName) &&
+					('SELECT' !== el.nodeName) &&
+					('TEXTAREA' !== el.nodeName)
 				) ||
 				el.disabled ||
 				!el.getAttribute('name') ||
-				(el.getAttribute('type') === 'button') ||
-				(el.getAttribute('type') === 'submit') ||
-				(el.getAttribute('type') === 'reset')
+				('button' === el.getAttribute('type')) ||
+				('submit' === el.getAttribute('type')) ||
+				('reset' === el.getAttribute('type'))
 			) {
 				return false;
 			}
@@ -1069,8 +1100,8 @@
 		 *
 		 * Find form field elements belonging to a given form.
 		 *
-		 * @param DOMElement $el Form.
-		 * @return array|false Field elements or false.
+		 * @param {DOMElement} el Form.
+		 * @returns {array|false} Field elements or false.
 		 */
 		function _getFields(el) {
 			// Make sure the form is valid.
@@ -1080,7 +1111,7 @@
 
 			// Add any fields with a name to our list.
 			var out = [];
-			for (var i=0; i<el.elements.length; i++) {
+			for (var i = 0; i < el.elements.length; i++) {
 				if (_isField(el.elements[i])) {
 					out.push(el.elements[i]);
 				}
@@ -1098,9 +1129,9 @@
 		 *
 		 * Extraneous data, from e.g. removed nodes, will be cleaned.
 		 *
-		 * @param DOMElement $el Form.
-		 * @param bool $updateClasses Update classes when done.
-		 * @return bool True/false.
+		 * @param {DOMElement} el Form.
+		 * @param {bool} updateClasses Update classes when done.
+		 * @returns {bool} True/false.
 		 */
 		function _loadFields(el, updateClasses) {
 			// Make sure the form is valid.
@@ -1123,9 +1154,10 @@
 			// Make sure each field is represented.
 			var fieldNames = [],
 				fieldKeys = Object.keys(this.blobFields[name]),
-				errorKeys = Object.keys(this.blobFields[name]);
+				errorKeys = Object.keys(this.blobFields[name]),
+				vue = this;
 
-			for (i=0; i<fields.length; i++) {
+			for (let i = 0; i < fields.length; i++) {
 				// Verify the field we found has a valid name.
 				var fieldName = fields[i].getAttribute('name');
 				if (!fieldName) {
@@ -1133,7 +1165,7 @@
 				}
 
 				// Add it if missing.
-				if (fieldKeys.indexOf(fieldName) === -1) {
+				if (-1 === fieldKeys.indexOf(fieldName)) {
 					changed = true;
 					fieldKeys.push(fieldName);
 
@@ -1150,14 +1182,11 @@
 
 					// Bind an input listener to monitor blur, AKA what
 					// we're calling "touched".
-					/* jshint ignore:start */
-					var vue = this;
-					fields[i].addEventListener('blur', function (e) {
+					fields[i].addEventListener('blur', function(e) {
 						Vue.nextTick(function() {
 							_validateField.call(vue, el, e.target, true);
 						});
 					});
-					/* jshint ignore:end */
 				}
 
 				// And add to our running list.
@@ -1165,24 +1194,24 @@
 			}
 
 			// Remove any outmoded data.
-			for (i=0; i<fieldKeys.length; i++) {
+			for (let i = 0; i < fieldKeys.length; i++) {
 				// Remove field.
-				if (fieldNames.indexOf(fieldKeys[i]) === -1) {
+				if (-1 === fieldNames.indexOf(fieldKeys[i])) {
 					changed = true;
 
 					// Unbind any events.
 					try {
 						var fieldEvents = getEventListeners(this.blobFields[name].el);
-						for (j=0; j<fieldEvents.length; j++) {
+						for (let j = 0; j < fieldEvents.length; j++) {
 							fieldEvents[j].remove();
 						}
-					} catch (Ex) {}
+					} catch (Ex) { let noop; }
 
 					// Remove the field data.
 					Vue.delete(this.blobFields[name], fieldKeys[i]);
 
 					// Remove error.
-					if (errorKeys.indexOf(fieldKeys[i]) === -1) {
+					if (-1 === errorKeys.indexOf(fieldKeys[i])) {
 						changed = true;
 						Vue.delete(this.blobFields[name], fieldKeys[i]);
 					}
@@ -1193,9 +1222,8 @@
 			// object changes right away.
 			if (changed) {
 				this.$forceUpdate();
-				if (!!updateClasses) {
-					var vue = this;
-					Vue.nextTick(function(){
+				if (updateClasses) {
+					Vue.nextTick(function() {
 						_updateFormClasses.call(vue, el);
 					});
 				}
@@ -1210,11 +1238,11 @@
 		 * If the condition passes, add the good and remove the bad
 		 * classes. Otherwise, do the reverse.
 		 *
-		 * @param DOMElement $el Element.
-		 * @param mixed $good Good classes.
-		 * @param mixed $bad Bad classes.
-		 * @param bool $test Condition.
-		 * @return bool True/false.
+		 * @param {DOMElement} el Element.
+		 * @param {mixed} good Good classes.
+		 * @param {mixed} bad Bad classes.
+		 * @param {bool} test Condition.
+		 * @returns {bool} True/false.
 		 */
 		function _toggleClasses(el, good, bad, test) {
 			if (!el.getAttribute('name')) {
@@ -1222,7 +1250,7 @@
 			}
 
 			// We want an array of good classes.
-			if (typeof good === 'string') {
+			if ('string' === typeof good) {
 				good = good.split(' ');
 			}
 			if (!Array.isArray(good)) {
@@ -1230,7 +1258,7 @@
 			}
 
 			// We want an array of bad classes.
-			if (typeof bad === 'string') {
+			if ('string' === typeof bad) {
 				bad = bad.split(' ');
 			}
 			if (!Array.isArray(bad)) {
@@ -1242,7 +1270,7 @@
 				hasClass;
 
 			// Loop through the good.
-			for (i=0; i<good.length; i++) {
+			for (i = 0; i < good.length; i++) {
 				if (!good[i]) {
 					continue;
 				}
@@ -1260,7 +1288,7 @@
 			}
 
 			// Loop through the bad.
-			for (i=0; i<bad.length; i++) {
+			for (i = 0; i < bad.length; i++) {
 				if (!bad[i]) {
 					continue;
 				}
@@ -1289,12 +1317,12 @@
 		 * To make comparisons easier, and to cut down on memory waste,
 		 * values are stored as a very simple checksum.
 		 *
-		 * @param mixed $value Value.
-		 * @return string Hash.
+		 * @param {mixed} value Value.
+		 * @returns {string} Hash.
 		 */
 		function _checksum(value) {
 			// We need a string. For objects, JSON will suffice.
-			if (typeof value === 'object') {
+			if ('object' === typeof value) {
 				try {
 					value = JSON.stringify(value);
 				} catch (Ex) {
@@ -1316,7 +1344,7 @@
 				i,
 				c;
 
-			for (i=0; i<strlen; i++) {
+			for (i = 0; i < strlen; i++) {
 				c = value.charCodeAt(i);
 				hash = ((hash << 5) - hash) + c;
 				hash = hash & hash; // Convert to 32-bit integer.
@@ -1333,196 +1361,211 @@
 		 *
 		 * @see http://www.myersdaily.org/joseph/javascript/md5-text.html
 		 *
-		 * @param string $str String.
-		 * @return string Hash.
+		 * @param {string} str String.
+		 * @returns {string} Hash.
 		 */
-		function _md5(str){
+		function _md5(str) {
+			/* eslint-disable */
 			var md5cycle = function(x, k) {
-				var a = x[0],
-					b = x[1],
-					c = x[2],
-					d = x[3];
+					var a = x[0],
+						b = x[1],
+						c = x[2],
+						d = x[3];
 
-				a = ff(a, b, c, d, k[0], 7, -680876936);
-				d = ff(d, a, b, c, k[1], 12, -389564586);
-				c = ff(c, d, a, b, k[2], 17, 606105819);
-				b = ff(b, c, d, a, k[3], 22, -1044525330);
-				a = ff(a, b, c, d, k[4], 7, -176418897);
-				d = ff(d, a, b, c, k[5], 12, 1200080426);
-				c = ff(c, d, a, b, k[6], 17, -1473231341);
-				b = ff(b, c, d, a, k[7], 22, -45705983);
-				a = ff(a, b, c, d, k[8], 7, 1770035416);
-				d = ff(d, a, b, c, k[9], 12, -1958414417);
-				c = ff(c, d, a, b, k[10], 17, -42063);
-				b = ff(b, c, d, a, k[11], 22, -1990404162);
-				a = ff(a, b, c, d, k[12], 7, 1804603682);
-				d = ff(d, a, b, c, k[13], 12, -40341101);
-				c = ff(c, d, a, b, k[14], 17, -1502002290);
-				b = ff(b, c, d, a, k[15], 22, 1236535329);
+					a = ff(a, b, c, d, k[0], 7, -680876936);
+					d = ff(d, a, b, c, k[1], 12, -389564586);
+					c = ff(c, d, a, b, k[2], 17, 606105819);
+					b = ff(b, c, d, a, k[3], 22, -1044525330);
+					a = ff(a, b, c, d, k[4], 7, -176418897);
+					d = ff(d, a, b, c, k[5], 12, 1200080426);
+					c = ff(c, d, a, b, k[6], 17, -1473231341);
+					b = ff(b, c, d, a, k[7], 22, -45705983);
+					a = ff(a, b, c, d, k[8], 7, 1770035416);
+					d = ff(d, a, b, c, k[9], 12, -1958414417);
+					c = ff(c, d, a, b, k[10], 17, -42063);
+					b = ff(b, c, d, a, k[11], 22, -1990404162);
+					a = ff(a, b, c, d, k[12], 7, 1804603682);
+					d = ff(d, a, b, c, k[13], 12, -40341101);
+					c = ff(c, d, a, b, k[14], 17, -1502002290);
+					b = ff(b, c, d, a, k[15], 22, 1236535329);
 
-				a = gg(a, b, c, d, k[1], 5, -165796510);
-				d = gg(d, a, b, c, k[6], 9, -1069501632);
-				c = gg(c, d, a, b, k[11], 14, 643717713);
-				b = gg(b, c, d, a, k[0], 20, -373897302);
-				a = gg(a, b, c, d, k[5], 5, -701558691);
-				d = gg(d, a, b, c, k[10], 9, 38016083);
-				c = gg(c, d, a, b, k[15], 14, -660478335);
-				b = gg(b, c, d, a, k[4], 20, -405537848);
-				a = gg(a, b, c, d, k[9], 5, 568446438);
-				d = gg(d, a, b, c, k[14], 9, -1019803690);
-				c = gg(c, d, a, b, k[3], 14, -187363961);
-				b = gg(b, c, d, a, k[8], 20, 1163531501);
-				a = gg(a, b, c, d, k[13], 5, -1444681467);
-				d = gg(d, a, b, c, k[2], 9, -51403784);
-				c = gg(c, d, a, b, k[7], 14, 1735328473);
-				b = gg(b, c, d, a, k[12], 20, -1926607734);
+					a = gg(a, b, c, d, k[1], 5, -165796510);
+					d = gg(d, a, b, c, k[6], 9, -1069501632);
+					c = gg(c, d, a, b, k[11], 14, 643717713);
+					b = gg(b, c, d, a, k[0], 20, -373897302);
+					a = gg(a, b, c, d, k[5], 5, -701558691);
+					d = gg(d, a, b, c, k[10], 9, 38016083);
+					c = gg(c, d, a, b, k[15], 14, -660478335);
+					b = gg(b, c, d, a, k[4], 20, -405537848);
+					a = gg(a, b, c, d, k[9], 5, 568446438);
+					d = gg(d, a, b, c, k[14], 9, -1019803690);
+					c = gg(c, d, a, b, k[3], 14, -187363961);
+					b = gg(b, c, d, a, k[8], 20, 1163531501);
+					a = gg(a, b, c, d, k[13], 5, -1444681467);
+					d = gg(d, a, b, c, k[2], 9, -51403784);
+					c = gg(c, d, a, b, k[7], 14, 1735328473);
+					b = gg(b, c, d, a, k[12], 20, -1926607734);
 
-				a = hh(a, b, c, d, k[5], 4, -378558);
-				d = hh(d, a, b, c, k[8], 11, -2022574463);
-				c = hh(c, d, a, b, k[11], 16, 1839030562);
-				b = hh(b, c, d, a, k[14], 23, -35309556);
-				a = hh(a, b, c, d, k[1], 4, -1530992060);
-				d = hh(d, a, b, c, k[4], 11, 1272893353);
-				c = hh(c, d, a, b, k[7], 16, -155497632);
-				b = hh(b, c, d, a, k[10], 23, -1094730640);
-				a = hh(a, b, c, d, k[13], 4, 681279174);
-				d = hh(d, a, b, c, k[0], 11, -358537222);
-				c = hh(c, d, a, b, k[3], 16, -722521979);
-				b = hh(b, c, d, a, k[6], 23, 76029189);
-				a = hh(a, b, c, d, k[9], 4, -640364487);
-				d = hh(d, a, b, c, k[12], 11, -421815835);
-				c = hh(c, d, a, b, k[15], 16, 530742520);
-				b = hh(b, c, d, a, k[2], 23, -995338651);
+					a = hh(a, b, c, d, k[5], 4, -378558);
+					d = hh(d, a, b, c, k[8], 11, -2022574463);
+					c = hh(c, d, a, b, k[11], 16, 1839030562);
+					b = hh(b, c, d, a, k[14], 23, -35309556);
+					a = hh(a, b, c, d, k[1], 4, -1530992060);
+					d = hh(d, a, b, c, k[4], 11, 1272893353);
+					c = hh(c, d, a, b, k[7], 16, -155497632);
+					b = hh(b, c, d, a, k[10], 23, -1094730640);
+					a = hh(a, b, c, d, k[13], 4, 681279174);
+					d = hh(d, a, b, c, k[0], 11, -358537222);
+					c = hh(c, d, a, b, k[3], 16, -722521979);
+					b = hh(b, c, d, a, k[6], 23, 76029189);
+					a = hh(a, b, c, d, k[9], 4, -640364487);
+					d = hh(d, a, b, c, k[12], 11, -421815835);
+					c = hh(c, d, a, b, k[15], 16, 530742520);
+					b = hh(b, c, d, a, k[2], 23, -995338651);
 
-				a = ii(a, b, c, d, k[0], 6, -198630844);
-				d = ii(d, a, b, c, k[7], 10, 1126891415);
-				c = ii(c, d, a, b, k[14], 15, -1416354905);
-				b = ii(b, c, d, a, k[5], 21, -57434055);
-				a = ii(a, b, c, d, k[12], 6, 1700485571);
-				d = ii(d, a, b, c, k[3], 10, -1894986606);
-				c = ii(c, d, a, b, k[10], 15, -1051523);
-				b = ii(b, c, d, a, k[1], 21, -2054922799);
-				a = ii(a, b, c, d, k[8], 6, 1873313359);
-				d = ii(d, a, b, c, k[15], 10, -30611744);
-				c = ii(c, d, a, b, k[6], 15, -1560198380);
-				b = ii(b, c, d, a, k[13], 21, 1309151649);
-				a = ii(a, b, c, d, k[4], 6, -145523070);
-				d = ii(d, a, b, c, k[11], 10, -1120210379);
-				c = ii(c, d, a, b, k[2], 15, 718787259);
-				b = ii(b, c, d, a, k[9], 21, -343485551);
+					a = ii(a, b, c, d, k[0], 6, -198630844);
+					d = ii(d, a, b, c, k[7], 10, 1126891415);
+					c = ii(c, d, a, b, k[14], 15, -1416354905);
+					b = ii(b, c, d, a, k[5], 21, -57434055);
+					a = ii(a, b, c, d, k[12], 6, 1700485571);
+					d = ii(d, a, b, c, k[3], 10, -1894986606);
+					c = ii(c, d, a, b, k[10], 15, -1051523);
+					b = ii(b, c, d, a, k[1], 21, -2054922799);
+					a = ii(a, b, c, d, k[8], 6, 1873313359);
+					d = ii(d, a, b, c, k[15], 10, -30611744);
+					c = ii(c, d, a, b, k[6], 15, -1560198380);
+					b = ii(b, c, d, a, k[13], 21, 1309151649);
+					a = ii(a, b, c, d, k[4], 6, -145523070);
+					d = ii(d, a, b, c, k[11], 10, -1120210379);
+					c = ii(c, d, a, b, k[2], 15, 718787259);
+					b = ii(b, c, d, a, k[9], 21, -343485551);
 
-				x[0] = add32(a, x[0]);
-				x[1] = add32(b, x[1]);
-				x[2] = add32(c, x[2]);
-				x[3] = add32(d, x[3]);
-			},
+					x[0] = add32(a, x[0]);
+					x[1] = add32(b, x[1]);
+					x[2] = add32(c, x[2]);
+					x[3] = add32(d, x[3]);
+				},
 
-			cmn = function(q, a, b, x, s, t) {
-				a = add32(add32(a, q), add32(x, t));
-				return add32((a << s) | (a >>> (32 - s)), b);
-			},
+				cmn = function(q, a, b, x, s, t) {
+					a = add32(add32(a, q), add32(x, t));
+					return add32((a << s) | (a >>> (32 - s)), b);
+				},
 
-			ff = function(a, b, c, d, x, s, t) {
-				return cmn((b & c) | ((~b) & d), a, b, x, s, t);
-			},
+				ff = function(a, b, c, d, x, s, t) {
+					return cmn((b & c) | ((~b) & d), a, b, x, s, t);
+				},
 
-			gg = function(a, b, c, d, x, s, t) {
-				return cmn((b & d) | (c & (~d)), a, b, x, s, t);
-			},
+				gg = function(a, b, c, d, x, s, t) {
+					return cmn((b & d) | (c & (~d)), a, b, x, s, t);
+				},
 
-			hh = function(a, b, c, d, x, s, t) {
-				return cmn(b ^ c ^ d, a, b, x, s, t);
-			},
+				hh = function(a, b, c, d, x, s, t) {
+					return cmn(b ^ c ^ d, a, b, x, s, t);
+				},
 
-			ii = function(a, b, c, d, x, s, t) {
-				return cmn(c ^ (b | (~d)), a, b, x, s, t);
-			},
+				ii = function(a, b, c, d, x, s, t) {
+					return cmn(c ^ (b | (~d)), a, b, x, s, t);
+				},
 
-			md51 = function(s) {
-				txt = '';
-				var n = s.length,
-					state = [1732584193, -271733879, -1732584194, 271733878],
-					i;
-				for (i = 64; i <= s.length; i += 64) {
-					md5cycle(state, md5blk(s.substring(i - 64, i)));
-				}
-				s = s.substring(i - 64);
-				var tail = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-				for (i = 0; i < s.length; i++)
-					tail[i >> 2] |= s.charCodeAt(i) << ((i % 4) << 3);
-				tail[i >> 2] |= 0x80 << ((i % 4) << 3);
-				if (i > 55) {
+				md51 = function(s) {
+					txt = '';
+					var n = s.length,
+						state = [1732584193, -271733879, -1732584194, 271733878],
+						i;
+					for (i = 64; i <= s.length; i += 64) {
+						md5cycle(state, md5blk(s.substring(i - 64, i)));
+					}
+					s = s.substring(i - 64);
+					var tail = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+					for (i = 0; i < s.length; i++)
+					{tail[i >> 2] |= s.charCodeAt(i) << ((i % 4) << 3);}
+					tail[i >> 2] |= 0x80 << ((i % 4) << 3);
+					if (55 < i) {
+						md5cycle(state, tail);
+						for (i = 0; 16 > i; i++) tail[i] = 0;
+					}
+					tail[14] = n * 8;
 					md5cycle(state, tail);
-					for (i = 0; i < 16; i++) tail[i] = 0;
-				}
-				tail[14] = n * 8;
-				md5cycle(state, tail);
-				return state;
-			},
+					return state;
+				},
 
-			md5blk = function(s) { /* I figured global was faster.   */
-				var md5blks = [],
-					i; /* Andy King said do it this way. */
-				for (i = 0; i < 64; i += 4) {
-					md5blks[i >> 2] = s.charCodeAt(i) +
+				md5blk = function(s) {
+					var md5blks = [],
+						i; // Andy King said do it this way.
+					for (i = 0; 64 > i; i += 4) {
+						md5blks[i >> 2] = s.charCodeAt(i) +
 						(s.charCodeAt(i + 1) << 8) +
 						(s.charCodeAt(i + 2) << 16) +
 						(s.charCodeAt(i + 3) << 24);
-				}
-				return md5blks;
-			},
+					}
+					return md5blks;
+				},
 
-			hex_chr = '0123456789abcdef'.split(''),
+				hex_chr = '0123456789abcdef'.split(''),
 
-			rhex = function(n) {
-				var s = '',
-					j = 0;
-				for (; j < 4; j++)
-					s += hex_chr[(n >> (j * 8 + 4)) & 0x0F] +
-					hex_chr[(n >> (j * 8)) & 0x0F];
-				return s;
-			},
+				rhex = function(n) {
+					var s = '',
+						j = 0;
+					for (; 4 > j; j++)
+					{s += hex_chr[(n >> (j * 8 + 4)) & 0x0F] +
+					hex_chr[(n >> (j * 8)) & 0x0F];}
+					return s;
+				},
 
-			hex = function(x) {
-				for (var i = 0; i < x.length; i++)
-					x[i] = rhex(x[i]);
-				return x.join('');
-			},
+				hex = function(x) {
+					for (var i = 0; i < x.length; i++)
+					{x[i] = rhex(x[i]);}
+					return x.join('');
+				},
 
-			add32 = function(a, b) {
-				return (a + b) & 0xFFFFFFFF;
-			};
+				add32 = function(a, b) {
+					return (a + b) & 0xFFFFFFFF;
+				};
 
 			return hex(md51(str));
+			/* eslint-enable */
 		}
 
 		/**
 		 * Debounce
 		 *
-		 * @param function $fn Callback.
-		 * @param bool $wait Wait.
-		 * @param bool $no_postpone Do it now.
+		 * @param {function} fn Callback.
+		 * @param {bool} wait Wait.
+		 * @param {bool} no_postpone Do it now.
+		 * @returns {callback} Wrapper function.
 		 */
-		var _debounce = function(fn, wait, no_postpone){
+		var _debounce = function(fn, wait, no_postpone) {
 			var args, context, result, timeout;
 			var executed = true;
 
-			// Execute the callback function.
-			function ping(){
+			/**
+			 * Ping
+			 *
+			 * @returns {void} Nothing.
+			 */
+			function ping() {
 				result = fn.apply(context || this, args || []);
 				context = args = null;
 				executed = true;
 			}
 
-			// Cancel the timeout.
+			/**
+			 * Cancel Timeout
+			 *
+			 * @returns {void} Nothing.
+			 */
 			function cancel() {
-				if(timeout){
+				if (timeout) {
 					clearTimeout(timeout);
 					timeout = null;
 				}
 			}
 
-			// Generate a wrapper function to return.
+			/**
+			 * Wrapper
+			 *
+			 * @returns {void} Nothing.
+			 */
 			function wrapper() {
 				context = this;
 				args = arguments;
@@ -1548,13 +1591,13 @@
 		 * but why should that stop us? This function will find the
 		 * relevant model name so we can do something about it.
 		 *
-		 * @param Vue $vnode Vnode.
-		 * @return string Name.
+		 * @param {Vue} vnode Vnode.
+		 * @returns {string} Name.
 		 */
 		function _getModelName(vnode) {
 			try {
 				return vnode.data.directives.find(function(o) {
-					return (o.name === 'model');
+					return ('model' === o.name);
 				}).expression;
 			} catch (Ex) {
 				return false;
@@ -1566,7 +1609,7 @@
 	} ;
 
 	// Hook the code into Vue.
-	if (typeof window !== 'undefined' && window.Vue) {
+	if ('undefined' !== typeof window && window.Vue) {
 		window.Vue.use(BlobFormsVue);
 	}
 
