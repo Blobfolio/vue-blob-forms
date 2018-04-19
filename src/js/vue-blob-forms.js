@@ -3,7 +3,7 @@
  *
  * This is a Vue plugin for providing form validation.
  *
- * @version 0.2.1
+ * @version 0.6.0
  * @author Blobfolio, LLC <hello@blobfolio.com>
  * @package vue-blob-forms
  * @license WTFPL <http://www.wtfpl.net>
