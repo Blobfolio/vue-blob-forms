@@ -52,6 +52,10 @@
         "no-redeclare": "error",
         "no-unused-vars": "warn",
         "no-useless-concat": "error",
+        "one-var": [
+            "error",
+            "never"
+        ],
         "quote-props": [
             "error",
             "as-needed"
