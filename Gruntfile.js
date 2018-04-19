@@ -10,7 +10,9 @@ module.exports = function(grunt) {
 		sass: {
 			dist: {
 				options: {
-					style: 'compressed'
+					outputStyle: 'compressed',
+					sourceMap: true,
+					outFile: 'demo/assets/demo.css.map',
 				},
 				files: {
 					'demo/assets/demo.css': 'src/scss/demo.scss'
@@ -39,8 +41,16 @@ module.exports = function(grunt) {
 		},
 
 		// Javascript processing.
-		jshint: {
-			all: ['src/js/vue-blob-forms.js']
+		eslint: {
+			check: {
+				src: ['src/js/vue-blob-forms.js'],
+			},
+			fix: {
+				options: {
+					fix: true,
+				},
+				src: ['src/js/vue-blob-forms.js'],
+			}
 		},
 
 		uglify: {
@@ -94,17 +104,17 @@ module.exports = function(grunt) {
 	});
 
 	// These plugins provide necessary tasks.
-	grunt.loadNpmTasks('grunt-contrib-uglify');
+	grunt.loadNpmTasks('grunt-contrib-uglify-es');
 	grunt.loadNpmTasks('grunt-contrib-watch');
-	grunt.loadNpmTasks('grunt-contrib-sass');
-	grunt.loadNpmTasks('grunt-postcss');
-	grunt.loadNpmTasks('grunt-contrib-jshint');
+	grunt.loadNpmTasks('grunt-eslint');
 	grunt.loadNpmTasks('grunt-notify');
+	grunt.loadNpmTasks('grunt-postcss');
+	grunt.loadNpmTasks('grunt-sass');
 
 	// Tasks.
 	grunt.registerTask('default', ['css', 'javascript']);
 	grunt.registerTask('css', ['sass', 'postcss']);
-	grunt.registerTask('javascript', ['jshint', 'uglify']);
+	grunt.registerTask('javascript', ['eslint:check', 'uglify']);
 
 	grunt.event.on('watch', function(action, filepath, target) {
 		grunt.log.writeln(target + ': ' + filepath + ' has ' + action);
