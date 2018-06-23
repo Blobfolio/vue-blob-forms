@@ -324,7 +324,7 @@
 							el.setAttribute('data-blob-phone-valid', valid);
 						}
 
-					}, 500);
+					}, 2000);
 
 					// If libphonenumber-js is already here, let's just
 					// do what needs doing.
