@@ -24,7 +24,7 @@ SOURCES["demo/assets/demo.min.js"]="src/js/demo.js"
 for i in "${!SOURCES[@]}"
 do
 	echo -e "\033[2mcompiling:\033[0m $( basename "${SOURCES[$i]}" )"
-	uglifyjs -c --ecma 6 -o "${i}" -- "${SOURCES[$i]}" &
+	uglifyjs -c -o "${i}" -- "${SOURCES[$i]}" &
 done
 
 

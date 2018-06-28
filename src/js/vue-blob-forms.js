@@ -743,8 +743,9 @@
 				Vue.set(this.blobForms[name], '$lock', false);
 
 				// Update form classes.
-				Vue.nextTick(() => {
-					_updateFormClasses.call(this, el);
+				let vue = this;
+				Vue.nextTick(function() {
+					_updateFormClasses.call(vue, el);
 				});
 
 				return true;
@@ -942,8 +943,9 @@
 
 				// Update the form's classes?
 				if (!this.blobForms[name].$lock) {
-					Vue.nextTick(() => {
-						_updateFormClasses.call(this, form);
+					let vue = this;
+					Vue.nextTick(function() {
+						_updateFormClasses.call(vue, form);
 					});
 				}
 
@@ -1228,8 +1230,9 @@
 				if (changed) {
 					this.$forceUpdate();
 					if (updateClasses) {
-						Vue.nextTick(() => {
-							_updateFormClasses.call(this, el);
+						let vue = this;
+						Vue.nextTick(function() {
+							_updateFormClasses.call(vue, el);
 						});
 					}
 				}
