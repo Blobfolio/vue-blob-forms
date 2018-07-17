@@ -638,6 +638,51 @@
 			};
 
 			/**
+			 * Clear Errors
+			 *
+			 * Reset form errors.
+			 *
+			 * @param {string} name Form name.
+			 * @returns {bool} True/false.
+			 */
+			Vue.prototype.clearFormErrors = function(name) {
+				// Make sure the form is valid.
+				if (!name || ('undefined' === typeof this.blobErrors[name])) {
+					return false;
+				}
+
+				// First kill the errors.
+				Vue.set(this.blobErrors, name, {});
+
+				// Loop through fields to reset the validitity.
+				const fields = Object.keys(this.blobFields[name]);
+
+				// Loop through everything!
+				for (let i = 0; i < fields.length; i++) {
+					let key = fields[i];
+
+					if (!this.blobFields[name][key].valid) {
+						Vue.set(this.blobFields[name][key], 'valid', true);
+						if (this.blobFields[name][key].el.classList.contains('is-invalid')) {
+							this.blobFields[name][key].el.classList.remove('is-invalid');
+						}
+
+						if (!this.blobFields[name][key].el.classList.contains('is-valid')) {
+							this.blobFields[name][key].el.classList.add('is-valid');
+						}
+
+						this.blobFields[name][key].el.setCustomValidity('');
+					}
+				}
+
+				// Assume changes were made.
+				this.$forceUpdate();
+				_updateFormClasses.call(this, this.blobForms[name].el);
+
+				return true;
+			};
+
+			/**
 			 * Gravatar URL
 			 *
 			 * Get a gravatar URL given an email address.

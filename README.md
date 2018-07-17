@@ -122,6 +122,27 @@ this.setFormErrors('myForm', errors);
 ```
 
 
+### Method: clearFormErrors()
+
+This method can be used to quickly unset all errors for a form.
+
+#### Arguments
+
+| Type | Name | Description |
+| ---- | ---- | ----------- |
+| *string* | formName | The name of the form. |
+
+#### Returns
+
+This method will clear the form errors and return `TRUE`, or `FALSE` if bad arguments were passed.
+
+#### Example
+
+```javascript
+this.clearFormErrors('myForm');
+```
+
+
 ### Method: formTouched()
 
 This method can be used to determine whether or not a form or a specific field has been "touched".
