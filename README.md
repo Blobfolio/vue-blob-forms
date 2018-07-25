@@ -47,6 +47,13 @@ Name attributes are required for all forms and form fields. Any element without 
 ```
 
 
+### Ignoring Specific Fields
+
+By default, all fields within a `<form>` element are expected to validate according to their rules.
+
+If you need to exempt a field — perhaps because it serves some other Javascripty purpose — simply add a `novalidate-field` attribute to the element and it will be skipped.
+
+
 ### Method: formErrors()
 
 This method can be used to retrieve all errors for a given form, or an error for a single form field.

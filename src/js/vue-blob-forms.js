@@ -1144,6 +1144,14 @@
 					return false;
 				}
 
+				// One last check: disregard any "ignored" field.
+				if (
+					el.hasAttribute('novalidate-field') ||
+					el.hasAttribute('data-novalidate-field')
+				) {
+					return false;
+				}
+
 				return el.getAttribute('name');
 			}
 
