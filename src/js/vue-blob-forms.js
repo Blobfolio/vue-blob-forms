@@ -123,6 +123,7 @@
 					}, 100));
 
 					// Let's assume we have no fields yet and load our data.
+					vnode.context.$forceUpdate();
 					Vue.nextTick(function() {
 						_getFields.call(vnode.context, el);
 						Vue.nextTick(function() {
@@ -1086,6 +1087,7 @@
 			 */
 			function _isForm(el) {
 				if (
+					!el ||
 					!el.nodeName ||
 					('FORM' !== el.nodeName) ||
 					!el.getAttribute('name')
@@ -1107,6 +1109,7 @@
 			 */
 			function _isField(el) {
 				if (
+					!el ||
 					!el.nodeName ||
 					(
 						('INPUT' !== el.nodeName) &&
@@ -1147,7 +1150,7 @@
 
 				// Get our object back.
 				const el = document.querySelector('form[name="' + name + '"]');
-				if (!_isForm(el) || ('undefined' === typeof el.__blobForm__)) {
+				if (!el || !_isForm(el) || ('undefined' === typeof el.__blobForm__)) {
 					return false;
 				}
 
