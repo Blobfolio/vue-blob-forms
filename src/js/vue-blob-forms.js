@@ -3,7 +3,7 @@
  *
  * This is a Vue plugin for providing form validation.
  *
- * @version 0.6.0
+ * @version 0.7.0
  * @author Blobfolio, LLC <hello@blobfolio.com>
  * @package vue-blob-forms
  * @license WTFPL <http://www.wtfpl.net>
@@ -40,11 +40,6 @@
 			// Gravatar base URL.
 			const gravatar = 'https://www.gravatar.com/avatar/';
 
-			// This will hold our form states.
-			Vue.prototype.blobForms = {};
-			Vue.prototype.blobFields = {};
-			Vue.prototype.blobErrors = {};
-
 			// --------------------------------------------------------- end setup
 
 
@@ -80,27 +75,15 @@
 						el.setAttribute('novalidate', true);
 					}
 
-					// Set up the form object.
-					Vue.set(vnode.context.blobForms, name, {
-						name: name,
-						el: el,
+					// Store our data on the form element directly.
+					el.__blobForm__ = {
 						changed: false,
 						touched: false,
 						valid: true,
+						fieldCount: 0,
+						errors: {},
 						$lock: false,
-					});
-
-					// Make sure the field and errors tables have entries.
-					if ('undefined' === typeof vnode.context.blobFields[name]) {
-						Vue.set(vnode.context.blobFields, name, {});
-					}
-					if ('undefined' === typeof vnode.context.blobErrors[name]) {
-						Vue.set(vnode.context.blobErrors, name, {});
-					}
-
-					// Force Vue to update as it doesn't tend to notice deep
-					// object changes right away.
-					vnode.context.$forceUpdate();
+					};
 
 					// Watch for element changes. This code block is largely
 					// a duplicate of _loadFields(), but Vue has trouble
@@ -108,7 +91,9 @@
 					// passed to another function.
 					const observer = new MutationObserver(_debounce(function() {
 						Vue.nextTick(function() {
-							_loadFields.call(vnode.context, el, true);
+							if (!el.__blobForm__.$lock) {
+								_getFields.call(vnode.context, el);
+							}
 						});
 					}, 50));
 					observer.observe(el, {childList: true, subtree: true});
@@ -139,7 +124,7 @@
 
 					// Let's assume we have no fields yet and load our data.
 					Vue.nextTick(function() {
-						_loadFields.call(vnode.context, el);
+						_getFields.call(vnode.context, el);
 						Vue.nextTick(function() {
 							_validateForm.call(vnode.context, el);
 						});
@@ -400,13 +385,13 @@
 			 * @returns {mixed} Errors or false.
 			 */
 			Vue.prototype.formErrors = function(name, fieldName) {
-				// Make sure the form is valid.
-				if (!name || ('undefined' === typeof this.blobForms[name])) {
+				// Get our object back.
+				const el = _getFormByName(name);
+				if (!el) {
 					return false;
 				}
 
-				let errors = this.blobErrors[name] || {};
-				const errorKeys = Object.keys(errors);
+				const errorKeys = Object.keys(el.__blobForm__.errors);
 
 				// We have no errors.
 				if (!errorKeys.length) {
@@ -419,11 +404,11 @@
 						return false;
 					}
 
-					return errors[fieldName];
+					return el.__blobForm__.errors[fieldName];
 				}
 
 				// Return all errors.
-				return errors;
+				return el.__blobForm__.errors;
 			};
 
 			/**
@@ -436,23 +421,23 @@
 			 * @returns {mixed} Errors or false.
 			 */
 			Vue.prototype.formOtherErrors = function(name) {
-				// Make sure the form is valid.
-				if (!name || ('undefined' === typeof this.blobForms[name])) {
+				// Get our object back.
+				const el = _getFormByName(name);
+				if (!el) {
 					return false;
 				}
 
-				let errors = this.blobErrors[name] || {};
-				const errorKeys = Object.keys(errors);
+				const errorKeys = Object.keys(el.__blobForm__.errors);
 
 				// We have no errors.
 				if (!errorKeys.length) {
 					return false;
 				}
 
-				const fields = _getFields(this.blobForms[name].el);
+				const fields = _getFields.call(this, el);
 				const fieldKeys = [];
 
-				for (let i = 0; i < fields.length; i++) {
+				for (let i = 0; i < fields.length; ++i) {
 					const fieldName = fields[i].getAttribute('name') || '';
 					if (fieldName) {
 						fieldKeys.push(fieldName);
@@ -461,9 +446,9 @@
 
 				let out = {};
 				let found = false;
-				for (let i = 0; i < errorKeys.length; i++) {
+				for (let i = 0; i < errorKeys.length; ++i) {
 					if (-1 === fieldKeys.indexOf(errorKeys[i])) {
-						out[errorKeys[i]] = errors[errorKeys[i]];
+						out[errorKeys[i]] = el.__blobForm__.errors[errorKeys[i]];
 						found = true;
 					}
 				}
@@ -479,18 +464,20 @@
 			 * @returns {bool} True/false.
 			 */
 			Vue.prototype.formTouched = function(name, fieldName) {
-				// Make sure the form is valid.
-				if (!name || ('undefined' === typeof this.blobForms[name])) {
+				// Get our object back.
+				const el = _getFormByName(name);
+				if (!el) {
 					return false;
 				}
 
 				// Looking for a specific field's status?
 				if (fieldName) {
-					return this.blobFields[name][fieldName] && this.blobFields[name][fieldName].touched;
+					const fieldEl = _getFormFieldByName.call(this, el, fieldName);
+					return fieldEl && fieldEl.__blobForm__.touched;
 				}
 
 				// Return the form's status.
-				return this.blobForms[name].touched;
+				return el.__blobForm__.touched;
 			};
 
 			/**
@@ -501,18 +488,20 @@
 			 * @returns {bool} True/false.
 			 */
 			Vue.prototype.formChanged = function(name, fieldName) {
-				// Make sure the form is valid.
-				if (!name || ('undefined' === typeof this.blobForms[name])) {
+				// Get our object back.
+				const el = _getFormByName(name);
+				if (!el) {
 					return false;
 				}
 
 				// Looking for a specific field's status?
 				if (fieldName) {
-					return this.blobFields[name][fieldName] && this.blobFields[name][fieldName].changed;
+					const fieldEl = _getFormFieldByName.call(this, el, fieldName);
+					return fieldEl && fieldEl.__blobForm__.changed;
 				}
 
 				// Return the form's status.
-				return this.blobForms[name].changed;
+				return el.__blobForm__.changed;
 			};
 
 			/**
@@ -523,18 +512,20 @@
 			 * @returns {bool} True/false.
 			 */
 			Vue.prototype.formValid = function(name, fieldName) {
-				// Make sure the form is valid.
-				if (!name || ('undefined' === typeof this.blobForms[name])) {
+				// Get our object back.
+				const el = _getFormByName(name);
+				if (!el) {
 					return false;
 				}
 
 				// Looking for a specific field's status?
 				if (fieldName) {
-					return this.blobFields[name][fieldName] && this.blobFields[name][fieldName].valid;
+					const fieldEl = _getFormFieldByName.call(this, el, fieldName);
+					return fieldEl && fieldEl.__blobForm__.valid;
 				}
 
 				// Return the form's status.
-				return this.blobForms[name].valid;
+				return el.__blobForm__.valid;
 			};
 
 			/**
@@ -544,19 +535,18 @@
 			 * @returns {bool|object} True or errors.
 			 */
 			Vue.prototype.validateForm = function(name) {
-				// Make sure the form is valid.
-				if (!name || ('undefined' === typeof this.blobForms[name])) {
-					return { other: 'Invalid form.' };
+				// Get our object back.
+				const el = _getFormByName(name);
+				if (!el) {
+					console.warn('Invalid vue-blob-form: ', name);
+					return false;
 				}
 
 				// Force (re)check all fields.
-				_validateForm.call(this, this.blobForms[name].el, true);
+				_validateForm.call(this, el, true);
 
 				// See if we have any errors and report accordingly.
-				const errors = this.blobErrors[name] || {};
-				const errorKeys = Object.keys(errors);
-
-				return errorKeys.length ? errors : true;
+				return Object.keys(el.__blobForm__.errors).length ? el.__blobForm__.errors : true;
 			};
 
 			/**
@@ -571,8 +561,10 @@
 			 * @returns {bool} True/false.
 			 */
 			Vue.prototype.setFormErrors = function(name, errors) {
-				// Make sure the form is valid.
-				if (!name || ('undefined' === typeof this.blobErrors[name])) {
+				// Get our object back.
+				const el = _getFormByName(name);
+				if (!el) {
+					console.warn('Invalid vue-blob-form: ', name);
 					return false;
 				}
 
@@ -585,53 +577,59 @@
 					return false;
 				}
 
-				const fields = Object.keys(this.blobFields[name]);
-				const keys = Object.keys(errors);
+				const errorKeys = Object.keys(errors);
 				let changed = false;
 
 				// Again, exit if the data is bad.
-				if (!keys.length) {
+				if (!errorKeys.length) {
 					return false;
 				}
 
 				// Loop through everything!
-				for (let i = 0; i < keys.length; i++) {
-					let key = keys[i];
-					let value = errors[keys[i]];
-
+				for (let i = 0; i < errorKeys.length; ++i) {
 					// Bad error?
-					if (!value || ('string' !== typeof value)) {
+					if (!errors[errorKeys[i]] || ('string' !== typeof errors[errorKeys[i]])) {
 						continue;
 					}
 
-					changed = true;
-
 					// Record the main error.
-					this.blobErrors[name][key] = value;
-
-					// If this is a field, we should also update its
-					// validity details.
-					if (-1 !== fields.indexOf(key)) {
-						// Update internal meta.
-						if (this.blobFields[name][key].valid) {
-							Vue.set(this.blobFields[name][key], 'valid', false);
-						}
-						if (this.blobFields[name][key].el.classList.contains('is-valid')) {
-							this.blobFields[name][key].el.classList.remove('is-valid');
-						}
-						if (!this.blobFields[name][key].el.classList.contains('is-invalid')) {
-							this.blobFields[name][key].el.classList.add('is-invalid');
-						}
-
-						// And for good measure, the field's constraint error.
-						this.blobFields[name][key].el.setCustomValidity(value);
-					}
+					el.__blobForm__.errors[errorKeys[i]] = errors[errorKeys[i]];
+					changed = true;
 				}
 
-				// If we made changes, update the form classes.
+				// Post work.
 				if (changed) {
+					// Update any literal fields accordingly.
+					const fields = _getFields.call(this, el);
+					for (let i = 0; i < fields.length; ++i) {
+						let fieldName = fields[i].getAttribute('name') || '';
+						if (
+							fieldName &&
+							('string' === typeof el.__blobForm__.errors[fieldName])
+						) {
+							if (fields[i].__blobForm__.valid) {
+								// The validity is invalid, duh.
+								fields[i].__blobForm__.valid = false;
+
+								// Make sure the constraint is set.
+								fields[i].setCustomValidity(el.__blobForm__.errors[fieldName]);
+
+								_toggleClasses(
+									fields[i],
+									['is-valid', 'is:valid'],
+									['is-invalid', 'is:invalid'],
+									false
+								);
+							}
+						}
+					}
+
+					// Update the form as a whole.
 					this.$forceUpdate();
-					_updateFormClasses.call(this, this.blobForms[name].el);
+					let vue = this;
+					Vue.nextTick(function() {
+						_updateFormClasses.call(vue, el);
+					});
 				}
 
 				return true;
@@ -646,38 +644,38 @@
 			 * @returns {bool} True/false.
 			 */
 			Vue.prototype.clearFormErrors = function(name) {
-				// Make sure the form is valid.
-				if (!name || ('undefined' === typeof this.blobErrors[name])) {
+				// Get our object back.
+				const el = _getFormByName(name);
+				if (!el) {
+					console.warn('Invalid vue-blob-form: ', name);
 					return false;
 				}
 
-				// First kill the errors.
-				Vue.set(this.blobErrors, name, {});
+				// Reset the form errors.
+				el.__blobForm__.errors = {};
 
-				// Loop through fields to reset the validitity.
-				const fields = Object.keys(this.blobFields[name]);
+				// Strip any constraints from the fields.
+				const fields = _getFields.call(this, el);
+				for (let i = 0; i < fields.length; ++i) {
+					if (!fields[i].__blobForm__.valid) {
+						fields[i].__blobForm__.valid = true;
+						fields[i].setCustomValidity('');
 
-				// Loop through everything!
-				for (let i = 0; i < fields.length; i++) {
-					let key = fields[i];
-
-					if (!this.blobFields[name][key].valid) {
-						Vue.set(this.blobFields[name][key], 'valid', true);
-						if (this.blobFields[name][key].el.classList.contains('is-invalid')) {
-							this.blobFields[name][key].el.classList.remove('is-invalid');
-						}
-
-						if (!this.blobFields[name][key].el.classList.contains('is-valid')) {
-							this.blobFields[name][key].el.classList.add('is-valid');
-						}
-
-						this.blobFields[name][key].el.setCustomValidity('');
+						_toggleClasses(
+							fields[i],
+							['is-valid', 'is:valid'],
+							['is-invalid', 'is:invalid'],
+							true
+						);
 					}
 				}
 
-				// Assume changes were made.
+				// Update the form as a whole.
 				this.$forceUpdate();
-				_updateFormClasses.call(this, this.blobForms[name].el);
+				let vue = this;
+				Vue.nextTick(function() {
+					_updateFormClasses.call(vue, el);
+				});
 
 				return true;
 			};
@@ -752,18 +750,17 @@
 			 * @returns {bool} True/false.
 			 */
 			function _validateForm(el, touch) {
-				// Make sure the form is valid.
-				const name = _isForm(el);
-				if (
-					!name ||
-					!this.blobForms[name] ||
-					this.blobForms[name].$lock
-				) {
+				// Get our object back.
+				if ('undefined' === typeof el.__blobForm__) {
+					console.warn('Invalid vue-blob-form: ', el);
 					return false;
 				}
 
-				// Set a lock so this doesn't double-run.
-				Vue.set(this.blobForms[name], '$lock', true);
+				// Don't allow overlapping requests.
+				if (el.__blobForm__.$lock) {
+					return false;
+				}
+				el.__blobForm__.$lock = true;
 
 				// Cast $touch to a boolean.
 				touch = !!touch;
@@ -771,21 +768,21 @@
 				// Before we start validating, let's reset the error holder
 				// to clear any arbitrary messages a user might have
 				// injected.
-				this.blobErrors[name] = {};
+				el.__blobForm__.errors = {};
 
-				// Loop through and validate each field.
-				const fieldKeys = Object.keys(this.blobFields[name]);
-				for (let i = 0; i < fieldKeys.length; i++) {
+				// Loop and validate each field.
+				const fields = _getFields.call(this, el);
+				for (let i = 0; i < fields.length; ++i) {
 					_validateField.call(
 						this,
 						el,
-						this.blobFields[name][fieldKeys[i]].el,
+						fields[i],
 						touch
 					);
 				}
 
 				// Remove our lock.
-				Vue.set(this.blobForms[name], '$lock', false);
+				el.__blobForm__.$lock = false;
 
 				// Update form classes.
 				let vue = this;
@@ -805,41 +802,14 @@
 			 * @returns {bool} True/false.
 			 */
 			function _validateField(form, field, touch) {
-				// Make sure the form is valid.
 				const name = _isForm(form);
-				if (!name || !this.blobFields[name]) {
-					return false;
-				}
-
-				// Make sure the field is valid.
 				const fieldName = _isField(field);
-				if (!field) {
-					return false;
-				}
-
-				// Vue might mess up event trigger ordering when forms are
-				// conditionally displayed. If the data doesn't exist yet
-				// we can go ahead and create it.
-				if ('undefined' === typeof this.blobFields[name][fieldName]) {
-					console.warn('Missing Field Data: ' + name + '.' + fieldName);
-
-					// Save the data.
-					Vue.set(this.blobFields[name], fieldName, {
-						name: fieldName,
-						el: field,
-						originalValue: _checksum(field.value),
-						changed: false,
-						touched: false,
-						valid: true,
-						$lock: false,
-					});
-					this.$forceUpdate();
-				}
 
 				// If this is locked, get out of here.
-				if (this.blobFields[name][fieldName].$lock) {
+				if (field.__blobForm__.$lock) {
 					return false;
 				}
+				field.__blobForm__.$lock = true;
 
 				// Cast $touch to a boolean.
 				touch = !!touch;
@@ -847,18 +817,15 @@
 				let fieldValue = field.value || '';
 				let validity = false;
 
-				// Set a lock to pevent double-runs.
-				Vue.set(this.blobFields[name][fieldName], '$lock', true);
-
 				// Mark it touched?
-				if (touch && !this.blobFields[name][fieldName].touched) {
-					Vue.set(this.blobFields[name][fieldName], 'touched', true);
+				if (touch && !field.__blobForm__.touched) {
+					field.__blobForm__.touched = true;
 				}
 
 				// Mark it changed?
-				let changed = (_checksum(fieldValue) !== this.blobFields[name][fieldName].originalValue);
-				if (changed !== this.blobFields[name][fieldName].changed) {
-					Vue.set(this.blobFields[name][fieldName], 'changed', changed);
+				let changed = (_checksum(fieldValue) !== field.__blobForm__.originalValue);
+				if (changed !== field.__blobForm__.changed) {
+					field.__blobForm__.changed = changed;
 				}
 
 				// Start checking validity!
@@ -871,7 +838,7 @@
 				}
 				// Maybe empty/required? This shouldn't be counted as an
 				// in-your-face error unless the field has been touched.
-				else if (!this.blobFields[name][fieldName].touched) {
+				else if (!field.__blobForm__.touched) {
 					validity = field.validity;
 					if (validity.valueMissing) {
 						valid = true;
@@ -946,17 +913,17 @@
 				if (valid) {
 					_resetValidity(field);
 
-					if (this.blobErrors[name][fieldName]) {
-						Vue.delete(this.blobErrors[name], fieldName);
+					if ('undefined' !== typeof form.__blobForm__.errors[fieldName]) {
+						delete form.__blobForm__.errors[fieldName];
 					}
 				}
 				// Otherwise record the error.
 				else {
-					Vue.set(this.blobErrors[name], fieldName, field.validationMessage);
+					form.__blobForm__.errors[fieldName] = field.validationMessage;
 				}
 
-				if (valid !== this.blobFields[name][fieldName].valid) {
-					Vue.set(this.blobFields[name][fieldName], 'valid', valid);
+				if (valid !== field.__blobForm__.valid) {
+					field.__blobForm__.valid = valid;
 				}
 
 				// Update the field classes. These verbose conditions help
@@ -966,28 +933,35 @@
 					field,
 					['is-valid', 'is:valid'],
 					['is-invalid', 'is:invalid'],
-					this.blobFields[name][fieldName].valid
+					field.__blobForm__.valid
 				);
 
 				_toggleClasses(
 					field,
 					['is-touched', 'is:touched'],
 					[],
-					this.blobFields[name][fieldName].touched
+					field.__blobForm__.touched
 				);
 
 				_toggleClasses(
 					field,
 					['is-changed', 'is:changed'],
 					[],
-					this.blobFields[name][fieldName].changed
+					field.__blobForm__.changed
 				);
 
 				// Remove the lock.
-				Vue.set(this.blobFields[name][fieldName], '$lock', false);
+				field.__blobForm__.$lock = false;
 
 				// Update the form's classes?
-				if (!this.blobForms[name].$lock) {
+				if (
+					!form.__blobForm__.$lock &&
+					(
+						(field.__blobForm__.valid !== form.__blobForm__.valid) ||
+						(field.__blobForm__.touched !== form.__blobForm__.touched) ||
+						(field.__blobForm__.changed !== form.__blobForm__.changed)
+					)
+				) {
 					let vue = this;
 					Vue.nextTick(function() {
 						_updateFormClasses.call(vue, form);
@@ -1029,22 +1003,22 @@
 				}
 
 				let changed = false;
-				let valid = true;
+				let valid = !Object.keys(el.__blobForm__.errors).length;
 				let touched = false;
 
 				// The form is its fields. Loop through each to see if a
 				// status deviates from the natural state.
-				const fields = Object.keys(this.blobFields[name]);
-				for (let i = 0; i < fields.length; i++) {
-					if (!changed && this.blobFields[name][fields[i]].changed) {
+				const fields = _getFields.call(this, el, false);
+				for (let i = 0; i < fields.length; ++i) {
+					if (!changed && fields[i].__blobForm__.changed) {
 						changed = true;
 					}
 
-					if (valid && !this.blobFields[name][fields[i]].valid) {
+					if (valid && !fields[i].__blobForm__.valid) {
 						valid = false;
 					}
 
-					if (!touched && this.blobFields[name][fields[i]].touched) {
+					if (!touched && fields[i].__blobForm__.touched) {
 						touched = true;
 					}
 
@@ -1055,14 +1029,14 @@
 				}
 
 				// Update variables.
-				if (valid !== this.blobForms[name].valid) {
-					Vue.set(this.blobForms[name], 'valid', valid);
+				if (valid !== el.__blobForm__.valid) {
+					el.__blobForm__.valid = valid;
 				}
-				if (changed !== this.blobForms[name].changed) {
-					Vue.set(this.blobForms[name], 'changed', changed);
+				if (changed !== el.__blobForm__.changed) {
+					el.__blobForm__.changed = changed;
 				}
-				if (touched !== this.blobForms[name].touched) {
-					Vue.set(this.blobForms[name], 'touched', touched);
+				if (touched !== el.__blobForm__.touched) {
+					el.__blobForm__.touched = touched;
 				}
 
 				// Update the form classes. These verbose conditions help
@@ -1111,7 +1085,11 @@
 			 * @returns {string|bool} Name or false.
 			 */
 			function _isForm(el) {
-				if (!el.nodeName || ('FORM' !== el.nodeName) || !el.getAttribute('name')) {
+				if (
+					!el.nodeName ||
+					('FORM' !== el.nodeName) ||
+					!el.getAttribute('name')
+				) {
 					return false;
 				}
 
@@ -1156,6 +1134,48 @@
 			}
 
 			/**
+			 * Get Form By Name
+			 *
+			 * @param {string} name Name.
+			 * @return {DOMElement|bool} Element or false.
+			 */
+			function _getFormByName(name) {
+				// Make sure the form is valid.
+				if (!name) {
+					return false;
+				}
+
+				// Get our object back.
+				const el = document.querySelector('form[name="' + name + '"]');
+				if (!_isForm(el) || ('undefined' === typeof el.__blobForm__)) {
+					return false;
+				}
+
+				return el;
+			}
+
+			/**
+			 * Get Form Field Name
+			 *
+			 * @param {DOMElement} el Form element.
+			 * @param {string} name Field Name.
+			 * @return {DOMElement|bool} Element or false.
+			 */
+			function _getFormFieldByName(el, name) {
+				const fields = _getFields.call(this, el);
+				if (false !== fields) {
+					for (let i = 0; i < fields.length; ++i) {
+						let name2 = fields[i].getAttribute('name') || '';
+						if (name2 === name) {
+							return fields[i];
+						}
+					}
+				}
+
+				return false;
+			}
+
+			/**
 			 * Get Form Fields
 			 *
 			 * Find form field elements belonging to a given form.
@@ -1171,126 +1191,81 @@
 
 				// Add any fields with a name to our list.
 				let out = [];
-				for (let i = 0; i < el.elements.length; i++) {
-					if (_isField(el.elements[i])) {
+				let vue = this;
+				let changed = false;
+				let fieldNames = [];
+
+				for (let i = 0; i < el.elements.length; ++i) {
+					let fieldName = _isField(el.elements[i]);
+
+					if (fieldName) {
+						// We might have to initialize it.
+						if ('undefined' === typeof el.elements[i].__blobForm__) {
+							console.warn('Missing Field Data: ' + fieldName);
+
+							el.elements[i].__blobForm__ = {
+								originalValue: _checksum(el.elements[i].value || ''),
+								changed: false,
+								touched: false,
+								valid: true,
+								$lock: false,
+							};
+
+							// Bind an input listener to monitor blur,
+							// AKA what we're calling "touched".
+							el.elements[i].addEventListener('blur', function(e) {
+								Vue.nextTick(function() {
+									_validateField.call(vue, el, e.target, true);
+								});
+							});
+
+							changed = true;
+						}
+
+						fieldNames.push(fieldName);
 						out.push(el.elements[i]);
 					}
 				}
 
-				return out.length ? out : false;
-			}
+				// Keep track of the fieldCount to prevent ghost errors.
+				const fieldLength = out.length;
+				if (el.__blobForm__.fieldCount !== fieldLength) {
+					// If the form used to have more fields than it does
+					// now, let's remove any "other" errors to prevent
+					// ghost weirdness.
+					if (
+						el.__blobForm__.fieldCount > fieldLength &&
+						!el.__blobForm__.$lock
+					) {
+						if (!fieldLength) {
+							el.__blobForm__.errors = {};
+						}
+						else {
+							const errorKeys = Object.keys(el.__blobForm__.errors);
 
-			/**
-			 * Load Form Fields
-			 *
-			 * This function scans the DOM to see what fields a form has,
-			 * but also makes sure that there are corresponding data
-			 * entries for whatever is found.
-			 *
-			 * Extraneous data, from e.g. removed nodes, will be cleaned.
-			 *
-			 * @param {DOMElement} el Form.
-			 * @param {bool} updateClasses Update classes when done.
-			 * @returns {bool} True/false.
-			 */
-			function _loadFields(el, updateClasses) {
-				// Make sure the form is valid.
-				const name = _isForm(el);
-				if (false === name) {
-					return false;
-				}
-
-				// Pull the fields.
-				const fields = _getFields(el);
-				if (false === fields) {
-					Vue.set(this.blobForms[name], 'fields', {});
-					Vue.set(this.blobFields, 'name', {});
-					Vue.set(this.blobErrors, 'name', {});
-					return false;
-				}
-
-				let changed = false;
-
-				// Make sure each field is represented.
-				let fieldNames = [];
-				let fieldKeys = Object.keys(this.blobFields[name]);
-				let errorKeys = Object.keys(this.blobFields[name]);
-				let vue = this;
-
-				for (let i = 0; i < fields.length; i++) {
-					// Verify the field we found has a valid name.
-					let fieldName = fields[i].getAttribute('name');
-					if (!fieldName) {
-						continue;
-					}
-
-					// Add it if missing.
-					if (-1 === fieldKeys.indexOf(fieldName)) {
-						changed = true;
-						fieldKeys.push(fieldName);
-
-						// Push the data.
-						Vue.set(this.blobFields[name], fieldName, {
-							name: fieldName,
-							el: fields[i],
-							originalValue: _checksum(fields[i].value || ''),
-							changed: false,
-							touched: false,
-							valid: true,
-							$lock: false,
-						});
-
-						// Bind an input listener to monitor blur, AKA what
-						// we're calling "touched".
-						fields[i].addEventListener('blur', function(e) {
-							Vue.nextTick(function() {
-								_validateField.call(vue, el, e.target, true);
-							});
-						});
-					}
-
-					// And add to our running list.
-					fieldNames.push(fieldName);
-				}
-
-				// Remove any outmoded data.
-				for (let i = 0; i < fieldKeys.length; i++) {
-					// Remove field.
-					if (-1 === fieldNames.indexOf(fieldKeys[i])) {
-						changed = true;
-
-						// Unbind any events.
-						try {
-							const fieldEvents = getEventListeners(this.blobFields[name].el);
-							for (let j = 0; j < fieldEvents.length; j++) {
-								fieldEvents[j].remove();
+							for (let i = 0; i < errorKeys.length; ++i) {
+								if (-1 === fieldNames.indexOf(errorKeys[i])) {
+									delete el.__blobForm__.errors[errorKeys[i]];
+								}
 							}
-						} catch (Ex) { let noop; }
-
-						// Remove the field data.
-						Vue.delete(this.blobFields[name], fieldKeys[i]);
-
-						// Remove error.
-						if (-1 === errorKeys.indexOf(fieldKeys[i])) {
-							changed = true;
-							Vue.delete(this.blobFields[name], fieldKeys[i]);
 						}
 					}
+
+					el.__blobForm__.fieldCount = out.length;
+					changed = true;
 				}
 
 				// Force Vue to update as it doesn't tend to notice deep
 				// object changes right away.
 				if (changed) {
 					this.$forceUpdate();
-					if (updateClasses) {
-						let vue = this;
-						Vue.nextTick(function() {
-							_updateFormClasses.call(vue, el);
-						});
-					}
+
+					Vue.nextTick(function() {
+						_updateFormClasses.call(vue, el);
+					});
 				}
 
-				return true;
+				return out.length ? out : false;
 			}
 
 			/**
@@ -1330,7 +1305,7 @@
 				let hasClass;
 
 				// Loop through the good.
-				for (let i = 0; i < good.length; i++) {
+				for (let i = 0; i < good.length; ++i) {
 					if (!good[i]) {
 						continue;
 					}
@@ -1348,7 +1323,7 @@
 				}
 
 				// Loop through the bad.
-				for (let i = 0; i < bad.length; i++) {
+				for (let i = 0; i < bad.length; ++i) {
 					if (!bad[i]) {
 						continue;
 					}
@@ -1402,7 +1377,7 @@
 				let hash = 0;
 				const strlen = value.length;
 
-				for (let i = 0; i < strlen; i++) {
+				for (let i = 0; i < strlen; ++i) {
 					let c = value.charCodeAt(i);
 					hash = ((hash << 5) - hash) + c;
 					hash = hash & hash; // Convert to 32-bit integer.
@@ -1535,12 +1510,12 @@
 						}
 						s = s.substring(i - 64);
 						var tail = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-						for (i = 0; i < s.length; i++)
+						for (i = 0; i < s.length; ++i)
 						{tail[i >> 2] |= s.charCodeAt(i) << ((i % 4) << 3);}
 						tail[i >> 2] |= 0x80 << ((i % 4) << 3);
 						if (55 < i) {
 							md5cycle(state, tail);
-							for (i = 0; 16 > i; i++) tail[i] = 0;
+							for (i = 0; 16 > i; ++i) tail[i] = 0;
 						}
 						tail[14] = n * 8;
 						md5cycle(state, tail);
@@ -1571,7 +1546,7 @@
 					},
 
 					hex = function(x) {
-						for (var i = 0; i < x.length; i++)
+						for (var i = 0; i < x.length; ++i)
 						{x[i] = rhex(x[i]);}
 						return x.join('');
 					},
